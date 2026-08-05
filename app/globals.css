@@ -1,0 +1,277 @@
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ========== Reset & mobile optimizations ========== */
+* { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
+html, body { max-width: 100%; overflow-x: hidden; -webkit-text-size-adjust: 100%; }
+img, video { max-width: 100%; height: auto; }
+input, select, textarea, button { font-size: 16px; } /* Prevents iOS zoom on focus */
+button { cursor: pointer; -webkit-appearance: none; appearance: none; touch-action: manipulation; }
+select { -webkit-appearance: none; appearance: none; background-position: right 0.75rem center; background-repeat: no-repeat; }
+
+html { scroll-behavior: smooth; height: 100%; }
+html[data-scroll-behavior="auto"] { scroll-behavior: auto; }
+
+body {
+  background-color: #0A0A0A;
+  color: #fff;
+  font-family: 'Inter', system-ui, sans-serif;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100%;
+  min-height: 100dvh;
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+.font-display { font-family: 'Oswald', 'Impact', sans-serif; letter-spacing: 0.02em; }
+
+/* ========== Custom scrollbar (desktop) ========== */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #0A0A0A; }
+::-webkit-scrollbar-thumb { background: #C9A84C; border-radius: 3px; }
+@media (max-width: 767px) {
+  ::-webkit-scrollbar { width: 3px; height: 3px; }
+}
+
+/* ========== Gold gradient text ========== */
+.gold-text {
+  background: linear-gradient(135deg, #E6C76A 0%, #C9A84C 50%, #A8893A 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ========== Buttons ========== */
+.btn-gold {
+  @apply bg-gold text-dark font-semibold px-6 py-3 uppercase tracking-wider text-sm transition-all duration-300 hover:bg-[#E6C76A] hover:shadow-[0_0_30px_rgba(201,168,76,0.5)] active:scale-95;
+  min-height: 44px; /* iOS recommended minimum touch target */
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.btn-outline {
+  @apply border-2 border-white/80 text-white font-semibold px-6 py-3 uppercase tracking-wider text-sm transition-all duration-300 hover:border-gold hover:text-gold active:scale-95;
+  min-height: 44px;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.btn-dark {
+  @apply bg-white/10 text-white border border-white/20 px-5 py-2.5 uppercase tracking-wider text-xs font-semibold transition-all duration-200 hover:bg-white/20 active:scale-95;
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Mobile: slightly less padding on buttons */
+@media (max-width: 480px) {
+  .btn-gold, .btn-outline { @apply px-4 py-2.5 text-xs; }
+}
+
+/* ========== Modal backdrop ========== */
+.modal-backdrop {
+  @apply fixed inset-0 bg-black/90 z-50 flex items-start sm:items-center justify-center overflow-y-auto p-2 sm:p-4 backdrop-blur-sm animate-fade-in;
+  padding-top: max(1rem, env(safe-area-inset-top));
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ========== Artist card ========== */
+.artist-card {
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.5s;
+  -webkit-tap-highlight-color: transparent;
+}
+.artist-card img {
+  transition: transform 0.7s;
+}
+@media (hover: hover) {
+  .artist-card:hover img { transform: scale(1.1); }
+}
+.artist-card:active { transform: scale(0.98); }
+.artist-card .overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, black, rgba(0,0,0,0.4), transparent);
+  opacity: 0.85;
+  transition: opacity 0.3s;
+  pointer-events: none;
+}
+@media (hover: hover) {
+  .artist-card:hover .overlay { opacity: 1; }
+}
+.artist-card .gifts-btn {
+  position: absolute;
+  bottom: 0.75rem;
+  right: 0.75rem;
+  background: #C9A84C;
+  color: #0A0A0A;
+  font-weight: 700;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  transition: all 0.3s;
+  display: none;
+  min-height: 36px;
+}
+@media (min-width: 768px) and (hover: hover) {
+  .artist-card .gifts-btn {
+    display: block;
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+  .artist-card:hover .gifts-btn {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Fix artist card name overflow */
+.artist-card .artist-name,
+.artist-card .overlay h3 {
+  word-break: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+  max-width: 100%;
+  line-height: 1.1;
+}
+.artist-card .artist-title,
+.artist-card .overlay p {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+/* ========== Inputs ========== */
+.form-input {
+  @apply w-full bg-dark-card border border-white/10 rounded-none px-4 py-3 text-white placeholder-white/40 focus:border-gold focus:outline-none transition-colors text-sm;
+  min-height: 44px;
+  -webkit-appearance: none;
+  appearance: none;
+  border-radius: 0;
+}
+textarea.form-input { min-height: auto; }
+/* Select arrow on dark bg */
+select.form-input {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23C9A84C' d='M6 8L0 0h12z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 2.25rem;
+}
+
+/* ========== Range / slider (seek bars) ========== */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  background: rgba(255,255,255,0.2);
+  border-radius: 2px;
+  outline: none;
+  min-height: 24px; /* bigger touch target area */
+  padding: 10px 0; /* extend the tap target */
+  background-clip: content-box;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  background: #C9A84C;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid #1A1A1A;
+  box-shadow: 0 0 6px rgba(201,168,76,0.6);
+}
+input[type="range"]::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  background: #C9A84C;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid #1A1A1A;
+  box-shadow: 0 0 6px rgba(201,168,76,0.6);
+}
+
+/* ========== Audio player (native) ========== */
+audio {
+  width: 100%;
+  max-width: 100%;
+}
+audio::-webkit-media-controls-panel { background: #1A1A1A; }
+/* Make native audio controls fit mobile */
+audio::-webkit-media-controls-enclosure {
+  max-width: 100%;
+  border-radius: 0;
+}
+
+/* ========== Tables — mobile friendly ========== */
+@media (max-width: 640px) {
+  table th, table td {
+    @apply px-2 py-2 text-xs;
+  }
+}
+
+/* ========== Mobile safe area ========== */
+@supports (padding: max(0px)) {
+  .safe-bottom { padding-bottom: max(1rem, env(safe-area-inset-bottom)); }
+  .safe-top { padding-top: max(1rem, env(safe-area-inset-top)); }
+  .safe-pt { padding-top: max(0px, env(safe-area-inset-top)); }
+}
+
+/* Prevent iOS fixed-position bug when keyboard opens */
+@supports (height: 100dvh) {
+  .min-h-screen { min-height: 100dvh; }
+}
+
+/* ========== Details/Summary (FAQ) — remove default marker on iOS ========== */
+summary::-webkit-details-marker { display: none; }
+summary { list-style: none; }
+
+/* ========== Toaster mobile fixes ========== */
+[data-sonner-toaster], .react-hot-toast-container {
+  bottom: max(1rem, env(safe-area-inset-bottom)) !important;
+  top: auto !important;
+  padding: 0 1rem !important;
+}
+
+/* ========== Iframes responsive (YouTube/TikTok) ========== */
+.video-embed-container {
+  position: relative;
+  width: 100%;
+  padding-bottom: 56.25%;
+  height: 0;
+  overflow: hidden;
+}
+.video-embed-container iframe {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+/* ========== Hide scrollbar on chip rows (mobile filter tabs) ========== */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* ========== Prevent long emails/URLs from breaking mobile layouts ========== */
+.break-anywhere {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+/* ========== Music equalizer animation (TrackRow "now playing" bars) ========== */
+@keyframes eq {
+  0%, 100% { height: 30%; }
+  50% { height: 100%; }
+}

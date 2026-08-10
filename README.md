@@ -12,10 +12,4 @@ A full-stack Next.js 14 website for **DLE Entertainment**, built mobile-first fo
 - Deploy to **Vercel**
 
 
-## 💸 Payments
-
-All gifts are processed through **PayMongo**'s hosted checkout. Fans are redirected to PayMongo's secure payment page, then back to your site on success.
-
- **all donations flow into one DLE Entertainment company wallet via PayMongo**.
-
 ---

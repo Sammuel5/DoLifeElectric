@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # 🎤 DLE Entertainment — Do Life Electric
 
 A full-stack Next.js 14 website for **DLE Entertainment**, built mobile-first for iOS and Android.
@@ -91,3 +92,11 @@ Per your request: **all donations flow into one DLE Entertainment company wallet
 ---
 
 See **[TUTORIAL.md](./TUTORIAL.md)** to set up every API key and deploy! ⚡
+=======
+# DoLifeElectric
+This is copy only
+
+Remove-Item -Recurse -Force .next
+Remove-Item -Recurse -Force .next -ErrorAction SilentlyContinue
+npm run dev
+>>>>>>> 782454eba0e6ba7b3e38ad4c13da2e113c49c600

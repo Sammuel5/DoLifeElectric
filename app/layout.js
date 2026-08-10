@@ -1,12 +1,12 @@
 import './globals.css'
-import { Inter } from 'next/font/google'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import Providers from '@/components/Providers'
 import SetupBanner from '@/components/SetupBanner'
 import CustomCursor from '@/components/CustomCursor'
 
-const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
+// Fonts are loaded via the @import in globals.css (Oswald + Inter) to avoid
+// a build-time fetch to Google Fonts that can fail in restricted networks.
 
 export const metadata = {
   title: 'DLE Entertainment — Do Life Electric',
@@ -31,7 +31,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" className="h-full">
       <body
-        className={`${inter.className} bg-dark text-white flex flex-col`}
+        className={`bg-dark text-white flex flex-col`}
         style={{ minHeight: '100dvh' }}
       >
         <Providers>

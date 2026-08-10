@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&family=Pinyon+Script&family=Great+Vibes&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -27,6 +27,7 @@ body {
 }
 
 .font-display { font-family: 'Oswald', 'Impact', sans-serif; letter-spacing: 0.02em; }
+.font-script { font-family: 'Pinyon Script', 'Great Vibes', 'Parisienne', cursive; }
 
 /* ========== Custom scrollbar (desktop) ========== */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -275,3 +276,71 @@ summary { list-style: none; }
   0%, 100% { height: 30%; }
   50% { height: 100%; }
 }
+
+/* ========== Hero (new split-layout) ========== */
+.btn-hero-gold {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg, #8A7530 0%, #5C4B1F 100%);
+  color: #fff;
+  font-family: 'Oswald', 'Impact', sans-serif;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.9rem 1.75rem;
+  min-width: 260px;
+  border-radius: 10px;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+  border: none;
+}
+.btn-hero-gold:hover { filter: brightness(1.15); box-shadow: 0 8px 28px rgba(90, 74, 34, 0.45); }
+
+.btn-hero-dark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg, #242424 0%, #0A0A0A 100%);
+  color: #fff;
+  font-family: 'Oswald', 'Impact', sans-serif;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.9rem 1.75rem;
+  min-width: 260px;
+  border-radius: 10px;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+  border: none;
+}
+.btn-hero-dark:hover { filter: brightness(1.3); }
+
+@media (max-width: 1023px) {
+  .btn-hero-gold, .btn-hero-dark {
+    width: 100%;
+    min-width: 0;
+    padding: 0.9rem 1.25rem;
+    font-size: 1rem;
+    letter-spacing: 0.1em;
+    min-height: 52px;
+  }
+}
+
+.video-placeholder {
+  border: 2px dashed rgba(0,0,0,0.35);
+  background: rgba(255,255,255,0.06);
+  color: rgba(0,0,0,0.65);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.95rem;
+  letter-spacing: 0.02em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 1rem;
+  border-radius: 6px;
+}
+

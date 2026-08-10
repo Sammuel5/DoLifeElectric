@@ -1,15 +1,77 @@
-node_modules
-.next
+# Dependencies
+node_modules/
+jspm_packages/
+
+# Next.js build output
+.next/
+out/
+
+# ON MY PC FILE
+.agents
+.github
+skills-lock.json
+README.md
+SETUP_WINDOWS.md
+
+
+# Production build
+build/
+dist/
+
+# Environment variables — NEVER commit these (they contain API keys, secrets, DB URIs)
 .env
 .env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.example
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
 *.log
+
+# macOS / Windows / Linux
 .DS_Store
-__pycache__
+Thumbs.db
+Desktop.ini
+
+# Python (if any scripts)
+__pycache__/
 *.pyc
-uploads/
-public/uploads/
-README.md
-SETUP_WINDOWS.MD
-TUTORIAL.md
+*.pyo
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Testing / coverage
+coverage/
+.nyc_output/
+
+# Local DB diagnostic script (may contain local connection strings when run with argv)
 test-db.js
 
+# Misc
+*.tgz
+.cache/
+.eslintcache
+.turbo/
+
+# Vercel / deployment
+.vercel
+
+# Uploaded user content — can contain large files and user data
+# (safe to keep local but not commit)
+public/uploads/*
+uploads/
+!public/uploads/.gitkeep
+
+# OS temp
+tmp/
+temp/

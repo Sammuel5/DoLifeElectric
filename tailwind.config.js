@@ -10,6 +10,9 @@ module.exports = {
       colors: {
         gold: '#C9A84C',
         'gold-dark': '#A8893A',
+        'olive-gold': '#7A6428',
+        'hero-bg': '#A39B8E',
+        'hero-bg-dark': '#8F8779',
         dark: '#0A0A0A',
         'dark-light': '#141414',
         'dark-card': '#1A1A1A',
@@ -17,6 +20,7 @@ module.exports = {
       fontFamily: {
         display: ['Oswald', 'Impact', 'sans-serif'],
         sans: ['Inter', 'system-ui', 'sans-serif'],
+        script: ['"Pinyon Script"', '"Great Vibes"', '"Parisienne"', 'cursive'],
       },
       animation: {
         'pulse-glow': 'pulse-glow 2s ease-in-out infinite',

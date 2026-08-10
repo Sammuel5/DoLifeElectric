@@ -37,7 +37,7 @@ export default function RootLayout({ children }) {
         <Providers>
           <Navbar />
           <SetupBanner />
-          <main className="flex-1 flex flex-col pt-16 safe-top">{children}</main>
+          <main className="flex-1 flex flex-col safe-bottom">{children}</main>
           <Footer />
           <CustomCursor />
         </Providers>

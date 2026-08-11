@@ -7,12 +7,12 @@ import { useEffect, useRef, useState } from 'react'
 /*
  * Nav layout:
  *
- * DESKTOP (md+):
+ * DESKTOP (lg+, 1024px+ — real laptops/desktops):
  *   [ HOME · ABOUT · FAQ · CONTACT ]     [LOGO]     [ ARTIST · MUSIC · SUPPORT · SIGN IN/ADMIN ]
  *   Black capsule smoothly slides to the active text link.
  *   The SIGN IN/ADMIN button is a rounded-[10px] black rectangle (far right).
  *
- * MOBILE (< md):
+ * MOBILE / TABLET (< lg, i.e. ≤1023px — includes phones in portrait AND landscape, iPads):
  *   [LOGO]                              [ MENU  ☰ ]   (black capsule, pill-shaped)
  *   Tapping MENU opens a full-screen gold/dark drawer with all links stacked.
  */
@@ -29,24 +29,27 @@ const RIGHT_LINKS = [
   { label: 'SUPPORT', href: '/artists#support' },
 ]
 
+// Desktop kicks in at 1024px (lg) so phones + tablets (even landscape) stay on mobile nav.
+const DESKTOP_BREAKPOINT = 1024
+
 function isActive(pathname, href) {
   if (href === '/') return pathname === '/'
   const cleanHref = href.split('#')[0]
   return pathname === cleanHref || pathname.startsWith(cleanHref + '/')
 }
 
-// Hamburger icon (three bars) — sized to match smaller button
+// Hamburger icon (three bars)
 function HamburgerIcon() {
   return (
     <svg width="22" height="16" viewBox="0 0 22 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <rect x="0" y="0"  width="22" height="3" rx="1.5" fill="white" />
+      <rect x="0" y="0"   width="22" height="3" rx="1.5" fill="white" />
       <rect x="0" y="6.5" width="22" height="3" rx="1.5" fill="white" />
       <rect x="0" y="13"  width="22" height="3" rx="1.5" fill="white" />
     </svg>
   )
 }
 
-// Close (X) icon — properly sized, thicker lines for touch
+// Close (X) icon
 function CloseIcon() {
   return (
     <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -75,8 +78,12 @@ export default function Navbar() {
 
   useEffect(() => {
     function movePill() {
-      // Only compute pill on desktop (md+ = 768px)
-      if (window.innerWidth < 768) { setPillStyle(s => ({ ...s, opacity: 0 })); setPillSide(null); return }
+      // Only compute pill on DESKTOP (lg+ = 1024px)
+      if (window.innerWidth < DESKTOP_BREAKPOINT) {
+        setPillStyle(s => ({ ...s, opacity: 0 }))
+        setPillSide(null)
+        return
+      }
       const inLeft  = LEFT_LINKS.find(l => isActive(pathname, l.href))
       const inRight = RIGHT_LINKS.find(l => isActive(pathname, l.href))
       const active = inLeft || inRight
@@ -136,16 +143,27 @@ export default function Navbar() {
   // Close drawer when route changes
   useEffect(() => { setMobileOpen(false) }, [pathname])
 
+  // Close drawer when resizing up to desktop
+  useEffect(() => {
+    function onResize() {
+      if (window.innerWidth >= DESKTOP_BREAKPOINT) setMobileOpen(false)
+    }
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+
   const signedInLabel = isAdmin ? 'ADMIN' : (session?.user?.name?.split(' ')[0]?.toUpperCase() || 'ACCOUNT')
 
   return (
-    <header className="relative w-full h-[56px] sm:h-[64px] md:h-[88px] z-50"
+    <header
+      className="relative w-full h-[56px] sm:h-[64px] lg:h-[88px] z-50"
       style={{
         background: 'linear-gradient(180deg, #5c4a20 0%, #4a3a18 50%, #3d2f13 100%)',
         borderBottom: '2px solid #2c2209',
         paddingTop: 'env(safe-area-inset-top, 0px)',
         boxShadow: 'inset 0 1px 0 rgba(255,220,140,0.18), inset 0 -1px 0 rgba(0,0,0,0.55), 0 4px 18px rgba(0,0,0,0.35)',
       }}>
+      {/* Height via class above — global --nav-h CSS var is set in globals.css for other sections to reference */}
 
       {/* Grunge texture */}
       <div aria-hidden className="absolute inset-0 mix-blend-soft-light opacity-80 pointer-events-none"
@@ -153,12 +171,12 @@ export default function Navbar() {
       <div aria-hidden className="pointer-events-none absolute inset-0"
         style={{ boxShadow: 'inset 0 0 120px rgba(0,0,0,0.3)' }} />
 
-      <nav className="relative h-full max-w-[1700px] mx-auto px-4 sm:px-5 md:px-8 lg:px-12 flex items-center justify-between">
+      <nav className="relative h-full max-w-[1700px] mx-auto px-4 sm:px-6 md:px-8 lg:px-12 flex items-center justify-between">
 
-        {/* =============== MOBILE LAYOUT (< md) =============== */}
+        {/* =============== MOBILE / TABLET LAYOUT (< lg, i.e. ≤1023px, including landscape phones & iPads) =============== */}
         {/* Left: shield logo */}
         <Link href="/" aria-label="DLE Home"
-          className="md:hidden flex items-center pointer-events-auto transition-transform hover:scale-[1.05] active:scale-[0.97]">
+          className="lg:hidden flex items-center pointer-events-auto transition-transform hover:scale-[1.05] active:scale-[0.97]">
           <img src="/dlelogo/dle-logo-sm.png" alt="DLE Entertainment"
             className="h-[34px] sm:h-[40px] w-auto object-contain block"
             style={{
@@ -170,7 +188,7 @@ export default function Navbar() {
         {/* Right: black capsule MENU button */}
         <button
           onClick={(e) => { e.stopPropagation(); setMobileOpen(v => !v) }}
-          className="md:hidden inline-flex items-center gap-2 px-5 sm:px-[22px] bg-[linear-gradient(90deg,#0e0e0e_0%,#1f1f1f_100%)] text-white font-display font-bold uppercase tracking-[0.12em] active:scale-95 transition-transform"
+          className="lg:hidden inline-flex items-center gap-2 px-5 sm:px-[22px] bg-[linear-gradient(90deg,#0e0e0e_0%,#1f1f1f_100%)] text-white font-display font-bold uppercase tracking-[0.12em] active:scale-95 transition-transform"
           aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
           aria-expanded={mobileOpen}
           type="button"
@@ -185,9 +203,9 @@ export default function Navbar() {
           {mobileOpen ? <CloseIcon /> : <HamburgerIcon />}
         </button>
 
-        {/* =============== DESKTOP LAYOUT (md+) =============== */}
+        {/* =============== DESKTOP LAYOUT (lg+, 1024px+) =============== */}
         {/* LEFT LINKS */}
-        <ul ref={leftListRef} className="hidden md:flex relative items-center gap-3 md:gap-5 lg:gap-8 flex-1 justify-start min-w-0">
+        <ul ref={leftListRef} className="hidden lg:flex relative items-center gap-5 xl:gap-8 flex-1 justify-start min-w-0">
           {pillSide === 'left' && (
             <span
               aria-hidden
@@ -206,7 +224,7 @@ export default function Navbar() {
             return (
               <li key={label} data-href={href} className="flex-shrink-0 relative z-10">
                 <Link href={href}
-                  className={`inline-flex items-center justify-center px-4 sm:px-5 md:px-6 lg:px-8 py-2 text-base md:text-lg lg:text-xl font-display font-semibold uppercase tracking-[0.1em] whitespace-nowrap transition-colors ${
+                  className={`inline-flex items-center justify-center px-5 lg:px-6 xl:px-8 py-2 text-lg lg:text-xl font-display font-semibold uppercase tracking-[0.1em] whitespace-nowrap transition-colors ${
                     active ? 'text-white' : 'text-white hover:text-[#f5dfa0]'
                   }`}>
                   {label}
@@ -216,17 +234,17 @@ export default function Navbar() {
           })}
         </ul>
 
-        {/* CENTER LOGO (desktop only; mobile uses top-left logo) */}
+        {/* CENTER LOGO (desktop only) */}
         <Link href="/" aria-label="DLE Home"
-          className="hidden md:block absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 pointer-events-auto transition-transform hover:scale-[1.05] active:scale-[0.97]">
+          className="hidden lg:block absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 pointer-events-auto transition-transform hover:scale-[1.05] active:scale-[0.97]">
           <img src="/dlelogo/dle-logo-sm.png" alt="DLE Entertainment"
-            className="h-[52px] md:h-[60px] w-auto object-contain"
+            className="h-[60px] xl:h-[68px] w-auto object-contain"
             style={{ filter: 'drop-shadow(0 4px 10px rgba(0,0,0,0.55))' }} />
         </Link>
 
         {/* RIGHT LINKS + SIGN IN (desktop) */}
-        <div className="hidden md:flex items-center gap-3 md:gap-5 lg:gap-8 flex-1 justify-end min-w-0">
-          <ul ref={rightListRef} className="relative flex items-center gap-3 md:gap-5 lg:gap-8">
+        <div className="hidden lg:flex items-center gap-5 xl:gap-8 flex-1 justify-end min-w-0">
+          <ul ref={rightListRef} className="relative flex items-center gap-5 xl:gap-8">
             {pillSide === 'right' && (
               <span
                 aria-hidden
@@ -245,7 +263,7 @@ export default function Navbar() {
               return (
                 <li key={label} data-href={href} className="flex-shrink-0 relative z-10">
                   <Link href={href}
-                    className={`inline-flex items-center justify-center px-4 sm:px-5 md:px-6 lg:px-8 py-2 text-base md:text-lg lg:text-xl font-display font-semibold uppercase tracking-[0.1em] whitespace-nowrap transition-colors ${
+                    className={`inline-flex items-center justify-center px-5 lg:px-6 xl:px-8 py-2 text-lg lg:text-xl font-display font-semibold uppercase tracking-[0.1em] whitespace-nowrap transition-colors ${
                       active ? 'text-white' : 'text-white hover:text-[#f5dfa0]'
                     }`}>
                     {label}
@@ -260,7 +278,7 @@ export default function Navbar() {
             {session ? (
               <>
                 <button onClick={() => setUserMenuOpen(v => !v)}
-                  className="inline-flex items-center justify-center px-4 sm:px-5 md:px-6 lg:px-8 py-2 bg-[linear-gradient(90deg,#141414_0%,#2b2b2b_100%)] hover:opacity-90 text-white text-base md:text-lg lg:text-xl font-display font-semibold uppercase tracking-[0.1em] whitespace-nowrap transition-opacity"
+                  className="inline-flex items-center justify-center px-5 lg:px-6 xl:px-8 py-2 bg-[linear-gradient(90deg,#141414_0%,#2b2b2b_100%)] hover:opacity-90 text-white text-lg lg:text-xl font-display font-semibold uppercase tracking-[0.1em] whitespace-nowrap transition-opacity"
                   style={{ borderRadius: 10 }}
                   aria-haspopup="menu" aria-expanded={userMenuOpen}>
                   {signedInLabel}
@@ -284,7 +302,7 @@ export default function Navbar() {
               </>
             ) : (
               <button onClick={() => signIn('google')}
-                className="inline-flex items-center justify-center px-4 sm:px-5 md:px-6 lg:px-8 py-2 bg-[linear-gradient(90deg,#141414_0%,#2b2b2b_100%)] hover:opacity-90 text-white text-base md:text-lg lg:text-xl font-display font-semibold uppercase tracking-[0.1em] whitespace-nowrap transition-opacity"
+                className="inline-flex items-center justify-center px-5 lg:px-6 xl:px-8 py-2 bg-[linear-gradient(90deg,#141414_0%,#2b2b2b_100%)] hover:opacity-90 text-white text-lg lg:text-xl font-display font-semibold uppercase tracking-[0.1em] whitespace-nowrap transition-opacity"
                 style={{ borderRadius: 10 }}>
                 SIGN IN
               </button>
@@ -295,7 +313,7 @@ export default function Navbar() {
 
       {/* =============== MOBILE DRAWER =============== */}
       <div
-        className={`md:hidden fixed inset-0 z-40 transition-opacity duration-300 ${mobileOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+        className={`lg:hidden fixed inset-0 z-40 transition-opacity duration-300 ${mobileOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
         aria-hidden={!mobileOpen}
       >
         {/* Backdrop */}

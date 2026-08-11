@@ -52,7 +52,7 @@ export default function ContactPage() {
     <div
       className="relative w-full overflow-hidden"
       style={{
-        minHeight: 'calc(100dvh - 64px)',
+        minHeight: 'calc(100dvh - var(--nav-h))',
         background:
           'radial-gradient(ellipse at 50% 40%, #1a1608 0%, #0A0806 55%, #000 100%)',
       }}

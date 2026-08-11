@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
-import { ChevronDown, Play, Pause, Volume2, VolumeX, Search } from 'lucide-react'
+import { ChevronDown, Play, Pause, Volume2, VolumeX, Search, ChevronLeft, ChevronRight } from 'lucide-react'
 import ArtistCard from '@/components/ArtistCard'
 import VideoModal from '@/components/VideoModal'
 import toast from 'react-hot-toast'
@@ -95,9 +95,9 @@ function HeroBackgroundVideo() {
 function TalentCard({ artist, onClick, featured }) {
   return (
     <div
-      className="relative overflow-hidden cursor-pointer group rounded-t-[18px] rounded-b-[14px] transition-transform duration-300 hover:scale-[1.03]"
+      className="relative overflow-hidden cursor-pointer group rounded-t-[18px] rounded-b-[14px] transition-transform duration-300 hover:scale-[1.03] active:scale-95"
       onClick={onClick}
-      style={{ aspectRatio: '3/4' }}
+      style={{ aspectRatio: '3/4', minWidth: 0 }}
     >
       {/* Image */}
       {artist.image ? (
@@ -143,6 +143,56 @@ function TalentCard({ artist, onClick, featured }) {
             Group
           </span>
         )}
+      </div>
+    </div>
+  )
+}
+
+/*
+ * Horizontal scroll carousel (mobile swipe row) — same as /artists page.
+ * - scroll-snap, touch-momentum, hidden scrollbar
+ * - left/right arrow buttons appear on md+ hover
+ */
+function SwipeRow({ children }) {
+  const scrollRef = useRef(null)
+
+  const scroll = (dir) => {
+    const el = scrollRef.current
+    if (!el) return
+    const amount = el.clientWidth * 0.8 * dir
+    el.scrollBy({ left: amount, behavior: 'smooth' })
+  }
+
+  return (
+    <div className="relative group/row">
+      {/* Arrow buttons — visible on md+ */}
+      <button
+        type="button"
+        onClick={() => scroll(-1)}
+        aria-label="Scroll left"
+        className="hidden md:flex absolute -left-3 top-1/2 -translate-y-1/2 z-20 w-10 h-10 items-center justify-center rounded-full bg-black/70 hover:bg-gold text-white hover:text-dark backdrop-blur-sm transition opacity-0 group-hover/row:opacity-100"
+      >
+        <ChevronLeft size={20} />
+      </button>
+      <button
+        type="button"
+        onClick={() => scroll(1)}
+        aria-label="Scroll right"
+        className="hidden md:flex absolute -right-3 top-1/2 -translate-y-1/2 z-20 w-10 h-10 items-center justify-center rounded-full bg-black/70 hover:bg-gold text-white hover:text-dark backdrop-blur-sm transition opacity-0 group-hover/row:opacity-100"
+      >
+        <ChevronRight size={20} />
+      </button>
+
+      <div
+        ref={scrollRef}
+        className="flex gap-3 md:gap-5 overflow-x-auto snap-x snap-mandatory pb-3 -mx-4 px-4 sm:-mx-6 sm:px-6 md:mx-0 md:px-0 no-scrollbar"
+        style={{
+          WebkitOverflowScrolling: 'touch',
+          scrollPaddingLeft: '1rem',
+          scrollPaddingRight: '1rem',
+        }}
+      >
+        {children}
       </div>
     </div>
   )
@@ -200,7 +250,7 @@ function HomeContent() {
         style={{ background: '#0A0A0A' }}
       >
         {/* Viewport height container */}
-        <div className="relative w-full overflow-hidden" style={{ minHeight: 'calc(100dvh - 56px)' }}>
+        <div className="relative w-full overflow-hidden" style={{ minHeight: 'calc(100dvh - var(--nav-h))' }}>
 
           {/* Layer 1: full-bleed background video */}
           <HeroBackgroundVideo />
@@ -227,7 +277,7 @@ function HomeContent() {
           {/* ===== MOBILE/TABLET HERO (< lg): content top, artist bottom-right in front ===== */}
           <div
             className="lg:hidden relative z-10 w-full h-full flex flex-col justify-between px-5 pt-4 sm:pt-6 pb-2"
-            style={{ minHeight: 'calc(100dvh - 56px)' }}
+            style={{ minHeight: 'calc(100dvh - var(--nav-h))' }}
           >
             {/* TOP: content block — sits above artist so text & buttons are never covered */}
             <div className="flex flex-col items-center text-center w-full relative z-20">
@@ -324,7 +374,7 @@ function HomeContent() {
           {/* ===== DESKTOP HERO (lg+): original approved left-aligned layout ===== */}
           <div
             className="hidden lg:flex relative z-10 w-full h-full pt-14 lg:pt-16 pb-20 pl-10 lg:pl-14 pr-[32%] xl:pr-[30%] items-center"
-            style={{ minHeight: 'calc(100dvh - 88px)' }}
+            style={{ minHeight: 'calc(100dvh - var(--nav-h))' }}
           >
             <div className="flex flex-col items-start text-left max-w-2xl">
               <div className="flex flex-col items-center w-full">
@@ -370,7 +420,7 @@ function HomeContent() {
               className="block w-auto"
               style={{
                 height: 'min(92vh, 780px)',
-                maxHeight: 'calc(100dvh - 88px)',
+                maxHeight: 'calc(100dvh - var(--nav-h))',
                 filter: 'drop-shadow(-20px 20px 40px rgba(0,0,0,0.35))',
               }}
             />
@@ -392,7 +442,7 @@ function HomeContent() {
       {/* ========================================== */}
       <section
         id="talents"
-        className="relative w-full overflow-hidden py-14 md:py-20 px-4 sm:px-6"
+        className="relative w-full overflow-hidden pt-10 pb-6 md:pt-14 md:pb-10 px-4 sm:px-6"
         style={{
           background:
             'radial-gradient(ellipse at 50% 0%, rgba(201,168,76,0.10) 0%, rgba(0,0,0,0) 45%), #0A0806',
@@ -461,13 +511,22 @@ function HomeContent() {
             </div>
           </div>
 
-          {/* Artist grid — large cards, slightly rounded top, gold base like the screenshot */}
+          {/* Artists — DESKTOP (md+) grid with featured center card; MOBILE (< md) horizontal swipe rows */}
           {loading ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
-              {[1,2,3,4,5].map(i => (
-                <div key={i} className="aspect-[3/4] rounded-t-[18px] rounded-b-[14px] bg-white/10 animate-pulse" />
-              ))}
-            </div>
+            <>
+              {/* Desktop skeleton */}
+              <div className="hidden md:grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
+                {[1,2,3,4,5].map(i => (
+                  <div key={i} className="aspect-[3/4] rounded-t-[18px] rounded-b-[14px] bg-white/10 animate-pulse" />
+                ))}
+              </div>
+              {/* Mobile skeleton swipe row */}
+              <div className="md:hidden flex gap-3 overflow-x-hidden -mx-4 px-4">
+                {[1,2,3,4].map(i => (
+                  <div key={i} className="flex-shrink-0 aspect-[3/4] rounded-t-[18px] rounded-b-[14px] bg-white/10 animate-pulse" style={{ width: '44vw' }} />
+                ))}
+              </div>
+            </>
           ) : homeFiltered.length === 0 ? (
             <div className="border border-white/10 p-12 text-center">
               <p className="text-white/40 font-display text-lg sm:text-xl uppercase tracking-widest">
@@ -476,27 +535,98 @@ function HomeContent() {
             </div>
           ) : (
             <div className="relative">
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6 items-end">
-                {homeFiltered.slice(0, 10).map((a, idx) => {
-                  const group = !a.isGroup && a.groupId ? groups.find(g => String(g._id) === String(a.groupId)) : null
-                  const isCenter = idx === 2 // "featured" card in the middle
+              {/* ======= DESKTOP (md+): grid layout with featured center card ======= */}
+              <div className="hidden md:block">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6 items-end">
+                  {homeFiltered.slice(0, 10).map((a, idx) => {
+                    const group = !a.isGroup && a.groupId ? groups.find(g => String(g._id) === String(a.groupId)) : null
+                    const isCenter = idx === 2
+                    return (
+                      <div
+                        key={a._id}
+                        className={`transition-transform duration-300 ${isCenter ? 'lg:scale-110 lg:-my-4 z-10' : ''}`}
+                      >
+                        <TalentCard artist={a} onClick={() => setSelected(a)} featured={isCenter} />
+                        {group && (
+                          <p className="text-[10px] sm:text-xs text-gold/60 text-center px-1 truncate mt-1.5">
+                            of <span className="text-gold/90 font-semibold">{group.name}</span>
+                          </p>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* ======= MOBILE (< md): horizontal swipe carousel ======= */}
+              <div className="md:hidden">
+                {homeFilter === 'all' ? (() => {
+                  // On "ALL" split into Groups row + Artists row (same pattern as /artists page)
+                  const mobileGroups = homeFiltered.filter(a => a.isGroup).slice(0, 10)
+                  const mobileIndividuals = homeFiltered.filter(a => !a.isGroup).slice(0, 10)
                   return (
-                    <div
-                      key={a._id}
-                      className={`transition-transform duration-300 ${isCenter ? 'lg:scale-110 lg:-my-4 z-10' : ''}`}
-                    >
-                      <TalentCard artist={a} onClick={() => setSelected(a)} featured={isCenter} />
-                      {group && (
-                        <p className="text-[10px] sm:text-xs text-gold/60 text-center px-1 truncate mt-1.5">
-                          of <span className="text-gold/90 font-semibold">{group.name}</span>
-                        </p>
+                    <div className="space-y-8">
+                      {mobileGroups.length > 0 && (
+                        <section>
+                          <div className="flex items-baseline gap-2 mb-4 px-1">
+                            <h3 className="font-display text-xl text-white uppercase leading-none">Groups</h3>
+                            <span className="text-white/40 text-sm">({mobileGroups.length})</span>
+                          </div>
+                          <SwipeRow>
+                            {mobileGroups.map(g => (
+                              <div key={g._id} className="snap-start flex-shrink-0" style={{ width: '44vw' }}>
+                                <TalentCard artist={g} onClick={() => setSelected(g)} />
+                              </div>
+                            ))}
+                          </SwipeRow>
+                        </section>
+                      )}
+                      {mobileIndividuals.length > 0 && (
+                        <section>
+                          <div className="flex items-baseline gap-2 mb-4 px-1">
+                            <h3 className="font-display text-xl text-white uppercase leading-none">Artists</h3>
+                            <span className="text-white/40 text-sm">({mobileIndividuals.length})</span>
+                          </div>
+                          <SwipeRow>
+                            {mobileIndividuals.map(a => {
+                              const g = !a.isGroup && a.groupId ? groups.find(gr => String(gr._id) === String(a.groupId)) : null
+                              return (
+                                <div key={a._id} className="snap-start flex-shrink-0" style={{ width: '44vw' }}>
+                                  <TalentCard artist={a} onClick={() => setSelected(a)} />
+                                  {g && (
+                                    <p className="text-[10px] text-gold/60 text-center px-1 truncate mt-1.5">
+                                      of <span className="text-gold/90 font-semibold">{g.name}</span>
+                                    </p>
+                                  )}
+                                </div>
+                              )
+                            })}
+                          </SwipeRow>
+                        </section>
                       )}
                     </div>
                   )
-                })}
+                })() : (
+                  // Single swipe row for GROUP or SOLO/ARIST filters
+                  <SwipeRow>
+                    {homeFiltered.slice(0, 10).map(a => {
+                      const g = !a.isGroup && a.groupId ? groups.find(gr => String(gr._id) === String(a.groupId)) : null
+                      return (
+                        <div key={a._id} className="snap-start flex-shrink-0" style={{ width: '44vw' }}>
+                          <TalentCard artist={a} onClick={() => setSelected(a)} />
+                          {g && (
+                            <p className="text-[10px] text-gold/60 text-center px-1 truncate mt-1.5">
+                              of <span className="text-gold/90 font-semibold">{g.name}</span>
+                            </p>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </SwipeRow>
+                )}
               </div>
 
-              {/* "See all" link under grid */}
+              {/* "See all" link */}
               {artists.length > 10 && (
                 <div className="text-center mt-10 md:mt-12">
                   <Link href="/artists" className="btn-outline">
@@ -509,20 +639,110 @@ function HomeContent() {
         </div>
       </section>
 
-      {/* MUSIC CTA */}
-      <section className="py-16 md:py-20 px-4 sm:px-6 bg-dark-light">
-        <div className="max-w-5xl mx-auto text-center">
-          <p className="text-gold text-xs uppercase tracking-[0.4em] mb-3">Now Playing</p>
-          <h2 className="font-display font-bold text-white text-4xl md:text-6xl uppercase leading-none mb-6">
-            Hear the <span className="gold-text">Music</span>
-          </h2>
-          <p className="text-white/60 mb-8 max-w-xl mx-auto text-sm">Stream and download music from our roster.</p>
-          <Link href="/music" className="btn-gold">Listen Now</Link>
+      {/* ========================================== */}
+      {/* MUSIC CTA — "Hear the Music" cinematic section */}
+      {/* ========================================== */}
+      <section
+        className="relative w-full overflow-hidden flex items-center justify-center"
+        style={{ minHeight: 'clamp(280px, 48vw, 480px)' }}
+      >
+        {/* Background image (bronze grunge + music notes) */}
+        <img
+          src="/uploads/images/home/music-cta-bg.png"
+          alt=""
+          aria-hidden="true"
+          className="absolute inset-0 w-full h-full object-cover select-none"
+        />
+        {/* Subtle darkening overlay to ensure text legibility (kept light so bronze BG shows) */}
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background: 'linear-gradient(180deg, rgba(10,8,6,0.05) 0%, rgba(10,8,6,0.15) 50%, rgba(10,8,6,0.35) 100%)',
+          }}
+        />
+
+        {/* Content */}
+        <div className="relative z-10 flex flex-col items-center justify-center text-center px-6 py-10 md:py-14">
+          {/* "TUNE IN" — small gold eyebrow */}
+          <p
+            className="font-display text-gold uppercase tracking-[0.4em] mb-4 md:mb-6"
+            style={{ fontSize: 'clamp(11px, 1.6vw, 18px)' }}
+          >
+            Tune In
+          </p>
+
+          {/* Headline row: HEAR + vertical THE + Music (script) */}
+          <div className="flex items-stretch justify-center gap-1 sm:gap-1.5 md:gap-2 leading-none select-none">
+            {/* HEAR — huge bold white */}
+            <h2
+              className="font-display font-black uppercase text-white tracking-tight self-center"
+              style={{ fontSize: 'clamp(56px, 14vw, 190px)', lineHeight: 0.85 }}
+            >
+              Hear
+            </h2>
+
+            {/* THE — stacked vertically, sized to ~35% of HEAR height, tucked tightly between */}
+            <span
+              className="font-display font-bold uppercase text-white/95 flex flex-col items-center justify-center"
+              style={{
+                fontSize: 'clamp(15px, 3.1vw, 42px)',
+                lineHeight: 0.95,
+                letterSpacing: '0.08em',
+                gap: '0.05em',
+                paddingTop: '0.15em',
+                paddingBottom: '0.35em',
+              }}
+            >
+              <span>T</span>
+              <span>H</span>
+              <span>E</span>
+            </span>
+
+            {/* Music — elegant gold script */}
+            <span
+              className="text-gold italic self-end"
+              style={{
+                fontFamily: '"Pinyon Script", "Great Vibes", cursive',
+                fontSize: 'clamp(68px, 18vw, 260px)',
+                lineHeight: 0.75,
+                textShadow: '0 4px 20px rgba(0,0,0,0.35)',
+                marginLeft: '-0.02em',
+                marginBottom: '-0.04em',
+              }}
+            >
+              Music
+            </span>
+          </div>
+
+          {/* Subtitle */}
+          <p
+            className="text-white/85 uppercase tracking-[0.3em] mt-5 md:mt-8 font-medium"
+            style={{ fontSize: 'clamp(9px, 1.6vw, 15px)' }}
+          >
+            Stream and Download Music From Our Roster
+          </p>
+
+          {/* LISTEN NOW button — solid gold flat rectangle, dark text */}
+          <Link
+            href="/music"
+            className="mt-7 md:mt-10 inline-flex items-center justify-center font-display uppercase tracking-[0.2em] text-dark bg-gold hover:bg-[#d9b85c] active:scale-95 transition-colors duration-200"
+            style={{
+              padding: '0.85em 2.2em',
+              fontSize: 'clamp(11px, 1.8vw, 15px)',
+              letterSpacing: '0.25em',
+              borderRadius: 0,
+              border: 'none',
+              minWidth: 'clamp(150px, 18vw, 220px)',
+            }}
+          >
+            Listen Now
+          </Link>
         </div>
       </section>
 
       {/* CONTACT CTA — full-width gold hand background filling the section + larger sign-in panel */}
-      <section className="relative bg-dark py-0 px-3 sm:px-0">
+      <section className="relative bg-dark pt-6 pb-8 md:pt-8 md:pb-10 px-3 sm:px-6">
         {/* Outer gold border layer spans full width */}
         <div
           className="relative w-full overflow-hidden p-[1.5px]"

@@ -4,6 +4,14 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ========== Navbar height variables (kept in sync with components/Navbar.js) ==========
+   Mobile/tablet (portrait+landscape, <lg): 56px → 64px.
+   Desktop (lg+, ≥1024px): 88px.
+   Use `calc(100dvh - var(--nav-h))` for hero/full-screen sections. */
+:root { --nav-h: 56px; }
+@media (min-width: 640px)  { :root { --nav-h: 64px; } }
+@media (min-width: 1024px) { :root { --nav-h: 88px; } }
+
 /* ========== Reset & mobile optimizations ========== */
 * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
 html, body { max-width: 100%; overflow-x: hidden; -webkit-text-size-adjust: 100%; }

@@ -6,14 +6,6 @@ jspm_packages/
 .next/
 out/
 
-# ON MY PC FILE
-.agents
-.github
-skills-lock.json
-README.md
-SETUP_WINDOWS.md
-
-
 # Production build
 build/
 dist/
@@ -24,7 +16,6 @@ dist/
 .env.development.local
 .env.test.local
 .env.production.local
-.env.example
 
 # Logs
 npm-debug.log*
@@ -53,9 +44,6 @@ __pycache__/
 # Testing / coverage
 coverage/
 .nyc_output/
-
-# Local DB diagnostic script (may contain local connection strings when run with argv)
-test-db.js
 
 # Misc
 *.tgz

@@ -1,12 +1,12 @@
 'use client'
 import { useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
-import { ChevronDown, Play, Pause, Volume2, VolumeX, Search, ChevronLeft, ChevronRight } from 'lucide-react'
-import ArtistCard from '@/components/ArtistCard'
+import { ChevronDown, Play, Pause, Volume2, VolumeX, Search } from 'lucide-react'
 import VideoModal from '@/components/VideoModal'
 import toast from 'react-hot-toast'
 import { useSearchParams } from 'next/navigation'
 import { Suspense } from 'react'
+import { MobileSwipeRow, DesktopCarousel } from '@/components/TalentCarousel'
 
 /*
  * HeroBackgroundVideo
@@ -143,56 +143,6 @@ function TalentCard({ artist, onClick, featured }) {
             Group
           </span>
         )}
-      </div>
-    </div>
-  )
-}
-
-/*
- * Horizontal scroll carousel (mobile swipe row) — same as /artists page.
- * - scroll-snap, touch-momentum, hidden scrollbar
- * - left/right arrow buttons appear on md+ hover
- */
-function SwipeRow({ children }) {
-  const scrollRef = useRef(null)
-
-  const scroll = (dir) => {
-    const el = scrollRef.current
-    if (!el) return
-    const amount = el.clientWidth * 0.8 * dir
-    el.scrollBy({ left: amount, behavior: 'smooth' })
-  }
-
-  return (
-    <div className="relative group/row">
-      {/* Arrow buttons — visible on md+ */}
-      <button
-        type="button"
-        onClick={() => scroll(-1)}
-        aria-label="Scroll left"
-        className="hidden md:flex absolute -left-3 top-1/2 -translate-y-1/2 z-20 w-10 h-10 items-center justify-center rounded-full bg-black/70 hover:bg-gold text-white hover:text-dark backdrop-blur-sm transition opacity-0 group-hover/row:opacity-100"
-      >
-        <ChevronLeft size={20} />
-      </button>
-      <button
-        type="button"
-        onClick={() => scroll(1)}
-        aria-label="Scroll right"
-        className="hidden md:flex absolute -right-3 top-1/2 -translate-y-1/2 z-20 w-10 h-10 items-center justify-center rounded-full bg-black/70 hover:bg-gold text-white hover:text-dark backdrop-blur-sm transition opacity-0 group-hover/row:opacity-100"
-      >
-        <ChevronRight size={20} />
-      </button>
-
-      <div
-        ref={scrollRef}
-        className="flex gap-3 md:gap-5 overflow-x-auto snap-x snap-mandatory pb-3 -mx-4 px-4 sm:-mx-6 sm:px-6 md:mx-0 md:px-0 no-scrollbar"
-        style={{
-          WebkitOverflowScrolling: 'touch',
-          scrollPaddingLeft: '1rem',
-          scrollPaddingRight: '1rem',
-        }}
-      >
-        {children}
       </div>
     </div>
   )
@@ -511,16 +461,14 @@ function HomeContent() {
             </div>
           </div>
 
-          {/* Artists — DESKTOP (md+) grid with featured center card; MOBILE (< md) horizontal swipe rows */}
+          {/* Artists — DESKTOP (md+) carousel with arrow + dot pagination; MOBILE (< md) swipe rows */}
           {loading ? (
             <>
-              {/* Desktop skeleton */}
-              <div className="hidden md:grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
+              <div className="hidden md:flex gap-5 overflow-hidden">
                 {[1,2,3,4,5].map(i => (
-                  <div key={i} className="aspect-[3/4] rounded-t-[18px] rounded-b-[14px] bg-white/10 animate-pulse" />
+                  <div key={i} className="flex-shrink-0 aspect-[3/4] rounded-t-[18px] rounded-b-[14px] bg-white/10 animate-pulse" style={{ flexBasis: 'calc((100% - 4 * 1.25rem) / 5)' }} />
                 ))}
               </div>
-              {/* Mobile skeleton swipe row */}
               <div className="md:hidden flex gap-3 overflow-x-hidden -mx-4 px-4">
                 {[1,2,3,4].map(i => (
                   <div key={i} className="flex-shrink-0 aspect-[3/4] rounded-t-[18px] rounded-b-[14px] bg-white/10 animate-pulse" style={{ width: '44vw' }} />
@@ -535,35 +483,78 @@ function HomeContent() {
             </div>
           ) : (
             <div className="relative">
-              {/* ======= DESKTOP (md+): grid layout with featured center card ======= */}
+              {/* ======= DESKTOP (md+): horizontal carousel with arrows + dots ======= */}
               <div className="hidden md:block">
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6 items-end">
-                  {homeFiltered.slice(0, 10).map((a, idx) => {
-                    const group = !a.isGroup && a.groupId ? groups.find(g => String(g._id) === String(a.groupId)) : null
-                    const isCenter = idx === 2
-                    return (
-                      <div
-                        key={a._id}
-                        className={`transition-transform duration-300 ${isCenter ? 'lg:scale-110 lg:-my-4 z-10' : ''}`}
-                      >
-                        <TalentCard artist={a} onClick={() => setSelected(a)} featured={isCenter} />
-                        {group && (
-                          <p className="text-[10px] sm:text-xs text-gold/60 text-center px-1 truncate mt-1.5">
-                            of <span className="text-gold/90 font-semibold">{group.name}</span>
-                          </p>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
+                {homeFilter === 'all' ? (() => {
+                  // On "ALL" split into Groups row + Artists row (same as /artists)
+                  const deskGroups = homeFiltered.filter(a => a.isGroup);
+                  const deskIndividuals = homeFiltered.filter(a => !a.isGroup);
+                  return (
+                    <div className="space-y-10 md:space-y-14">
+                      {deskGroups.length > 0 && (
+                        <section>
+                          <div className="flex items-baseline gap-3 mb-5 md:mb-6">
+                            <h3 className="font-display text-2xl md:text-3xl text-white uppercase leading-none">Groups</h3>
+                            <span className="text-white/40 text-base">({deskGroups.length})</span>
+                          </div>
+                          <DesktopCarousel>
+                            {deskGroups.map(g => (
+                              <div key={g._id}>
+                                <TalentCard artist={g} onClick={() => setSelected(g)} />
+                              </div>
+                            ))}
+                          </DesktopCarousel>
+                        </section>
+                      )}
+                      {deskIndividuals.length > 0 && (
+                        <section>
+                          <div className="flex items-baseline gap-3 mb-5 md:mb-6">
+                            <h3 className="font-display text-2xl md:text-3xl text-white uppercase leading-none">Artists</h3>
+                            <span className="text-white/40 text-base">({deskIndividuals.length})</span>
+                          </div>
+                          <DesktopCarousel>
+                            {deskIndividuals.map(a => {
+                              const g = a.groupId ? groups.find(gr => String(gr._id) === String(a.groupId)) : null;
+                              return (
+                                <div key={a._id}>
+                                  <TalentCard artist={a} onClick={() => setSelected(a)} />
+                                  {g && (
+                                    <p className="text-[10px] sm:text-xs text-gold/60 text-center px-1 truncate mt-1.5">
+                                      of <span className="text-gold/90 font-semibold">{g.name}</span>
+                                    </p>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </DesktopCarousel>
+                        </section>
+                      )}
+                    </div>
+                  );
+                })() : (
+                  <DesktopCarousel>
+                    {homeFiltered.map(a => {
+                      const g = a.groupId ? groups.find(gr => String(gr._id) === String(a.groupId)) : null;
+                      return (
+                        <div key={a._id}>
+                          <TalentCard artist={a} onClick={() => setSelected(a)} />
+                          {!a.isGroup && g && (
+                            <p className="text-[10px] sm:text-xs text-gold/60 text-center px-1 truncate mt-1.5">
+                              of <span className="text-gold/90 font-semibold">{g.name}</span>
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </DesktopCarousel>
+                )}
               </div>
 
               {/* ======= MOBILE (< md): horizontal swipe carousel ======= */}
               <div className="md:hidden">
                 {homeFilter === 'all' ? (() => {
-                  // On "ALL" split into Groups row + Artists row (same pattern as /artists page)
-                  const mobileGroups = homeFiltered.filter(a => a.isGroup).slice(0, 10)
-                  const mobileIndividuals = homeFiltered.filter(a => !a.isGroup).slice(0, 10)
+                  const mobileGroups = homeFiltered.filter(a => a.isGroup);
+                  const mobileIndividuals = homeFiltered.filter(a => !a.isGroup);
                   return (
                     <div className="space-y-8">
                       {mobileGroups.length > 0 && (
@@ -572,13 +563,13 @@ function HomeContent() {
                             <h3 className="font-display text-xl text-white uppercase leading-none">Groups</h3>
                             <span className="text-white/40 text-sm">({mobileGroups.length})</span>
                           </div>
-                          <SwipeRow>
+                          <MobileSwipeRow>
                             {mobileGroups.map(g => (
                               <div key={g._id} className="snap-start flex-shrink-0" style={{ width: '44vw' }}>
                                 <TalentCard artist={g} onClick={() => setSelected(g)} />
                               </div>
                             ))}
-                          </SwipeRow>
+                          </MobileSwipeRow>
                         </section>
                       )}
                       {mobileIndividuals.length > 0 && (
@@ -587,9 +578,9 @@ function HomeContent() {
                             <h3 className="font-display text-xl text-white uppercase leading-none">Artists</h3>
                             <span className="text-white/40 text-sm">({mobileIndividuals.length})</span>
                           </div>
-                          <SwipeRow>
+                          <MobileSwipeRow>
                             {mobileIndividuals.map(a => {
-                              const g = !a.isGroup && a.groupId ? groups.find(gr => String(gr._id) === String(a.groupId)) : null
+                              const g = a.groupId ? groups.find(gr => String(gr._id) === String(a.groupId)) : null;
                               return (
                                 <div key={a._id} className="snap-start flex-shrink-0" style={{ width: '44vw' }}>
                                   <TalentCard artist={a} onClick={() => setSelected(a)} />
@@ -599,18 +590,17 @@ function HomeContent() {
                                     </p>
                                   )}
                                 </div>
-                              )
+                              );
                             })}
-                          </SwipeRow>
+                          </MobileSwipeRow>
                         </section>
                       )}
                     </div>
-                  )
+                  );
                 })() : (
-                  // Single swipe row for GROUP or SOLO/ARIST filters
-                  <SwipeRow>
-                    {homeFiltered.slice(0, 10).map(a => {
-                      const g = !a.isGroup && a.groupId ? groups.find(gr => String(gr._id) === String(a.groupId)) : null
+                  <MobileSwipeRow>
+                    {homeFiltered.map(a => {
+                      const g = a.groupId ? groups.find(gr => String(gr._id) === String(a.groupId)) : null;
                       return (
                         <div key={a._id} className="snap-start flex-shrink-0" style={{ width: '44vw' }}>
                           <TalentCard artist={a} onClick={() => setSelected(a)} />
@@ -620,13 +610,13 @@ function HomeContent() {
                             </p>
                           )}
                         </div>
-                      )
+                      );
                     })}
-                  </SwipeRow>
+                  </MobileSwipeRow>
                 )}
               </div>
 
-              {/* "See all" link */}
+              {/* "See all" link under grid */}
               {artists.length > 10 && (
                 <div className="text-center mt-10 md:mt-12">
                   <Link href="/artists" className="btn-outline">

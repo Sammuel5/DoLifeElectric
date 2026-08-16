@@ -358,7 +358,7 @@ export default function AboutPage() {
           SEAMLESS from Section 2:
             - Same #000 black base (no color shift at the seam)
             - Bridge headline uses IDENTICAL size/weight/font/leading as S2's
-              ".IS AN ELITE ENTERTAINMENT COMPANY" line so the sentence
+              "IS AN ELITE ENTERTAINMENT COMPANY" line so the sentence
               reads as one continuous thought with no visual break.
             - Artists pulled up so they appear directly beneath the text,
               fully visible (heads + hands + bodies all in frame).
@@ -392,9 +392,9 @@ export default function AboutPage() {
               marginBottom: 'clamp(14px,3vw,22px)',
             }}
           >
-            .IS AN ELITE ENTERTAINMENT COMPANY
+            IS AN ELITE ENTERTAINMENT COMPANY
             <br />
-            PROVIDING INFRASTRUCTURE FOR ARTISTS
+            PROVIDING PLATFORM FOR ARTISTS
             <br />
             WHO CHOOSE TO LIGHT UP THE WORLD.
           </p>
@@ -422,7 +422,7 @@ export default function AboutPage() {
               style={{
                 position: 'absolute',
                 right: '10px',
-                top: '10%',
+                top: '30%',
                 width: '56%',
                 fontFamily: '"Montserrat","Inter",sans-serif',
                 fontSize: 'clamp(10px, 2.7vw, 13px)',
@@ -431,7 +431,7 @@ export default function AboutPage() {
                 zIndex: 10,
               }}
             >
-              Our fan support platform allows supporters worldwide to send gifts, food, clothing, and direct financial support to their favorite artists — securely, transparently, and with 100% of funds routed through DLE&rsquo;s official PayMongo accounts before being distributed to artists according to their contracts.
+              Gifting platform allows supporter worldwide to send appreciation such as accessories, clothing, and even direct financial rewards to their favorite artists.
             </p>
           </div>
 
@@ -507,9 +507,9 @@ export default function AboutPage() {
                 zIndex: 10,
               }}
             >
-              .IS AN ELITE ENTERTAINMENT COMPANY
+               IS AN ELITE ENTERTAINMENT COMPANY
               <br className="hidden sm:block" />
-              PROVIDING INFRASTRUCTURE FOR ARTISTS
+              PROVIDING PLATFORM FOR ARTISTS
               <br className="hidden lg:block" />
               WHO CHOOSE TO LIGHT UP THE WORLD.
             </p>
@@ -558,13 +558,9 @@ export default function AboutPage() {
                     zIndex: 10,
                   }}
                 >
-                  Our fan support platform allows supporters
-                  <br />worldwide to send gifts, food, clothing, and
-                  <br />direct financial support to their favorite artists
-                  <br />— securely, transparently, and with 100% of
-                  <br />funds routed through DLE&rsquo;s official PayMongo
-                  <br />accounts before being distributed to artists
-                  <br />according to their contracts.
+                  Gifting platform allows supporter worldwide
+                  <br />to send appreciation such as accessories, clothing, and
+                  <br />even direct financial rewards to their favorite artists.
                 </p>
               </div>
 
@@ -697,9 +693,9 @@ export default function AboutPage() {
             }}
           >
             <span className="text-white">EVERY PLAY.</span>{' '}
-            <span className="gold-text">EVERY DOWNLOAD.</span>
+            <span className="text-[#FFD93D]">EVERY DOWNLOAD.</span>
             <br />
-            <span className="gold-text">EVERY GIFT.</span>{' '}
+            <span className="text-[#FFD93D]">EVERY GIFT.</span>{' '}
             <span className="text-white">EVERY SHOW.</span>
           </h2>
 

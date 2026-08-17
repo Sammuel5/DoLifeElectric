@@ -81,7 +81,35 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="py-6 px-3 sm:py-10 sm:px-6 max-w-7xl mx-auto pb-24">
+    <>
+      <style jsx global>{`
+        /* Admin dashboard mobile optimizations */
+        .admin-mobile { word-break: break-word; }
+        .admin-mobile table { border-collapse: separate; border-spacing: 0; }
+        .admin-mobile td, .admin-mobile th { word-break: normal; }
+        .admin-mobile input[type="file"] { max-width: 100%; }
+        @media (max-width: 639px) {
+          .admin-mobile table th,
+          .admin-mobile table td { padding: 8px 6px !important; }
+          .admin-mobile table th { font-size: 9px !important; letter-spacing: 0.06em !important; }
+          .admin-mobile table td { font-size: 11px !important; }
+          .admin-mobile table td .text-sm { font-size: 12px !important; }
+          .admin-mobile table td .text-xs { font-size: 10px !important; }
+          .admin-mobile .form-input { font-size: 16px !important; padding: 10px 12px !important; }
+          .admin-mobile h1 { word-break: break-word; font-size: 1.5rem !important; }
+          .admin-mobile h3 { font-size: 1rem !important; }
+          .admin-mobile .btn-gold,
+          .admin-mobile .btn-dark { min-height: 40px; font-size: 11px !important; }
+          .admin-mobile img.avatar-sm { width: 36px !important; height: 36px !important; }
+          .admin-mobile textarea.form-input { font-size: 14px !important; }
+          .admin-mobile select.form-input { font-size: 14px !important; }
+          .admin-mobile label { font-size: 12px !important; }
+          .admin-mobile .space-y-4 > * + * { margin-top: 0.85rem !important; }
+          .admin-mobile audio, .admin-mobile video, .admin-mobile img { max-width: 100% !important; }
+          .admin-mobile .max-h-\[600px\] { max-height: 360px !important; }
+        }
+      `}</style>
+    <div className="py-4 px-3 sm:py-10 sm:px-6 max-w-7xl mx-auto pb-28 admin-mobile w-full min-w-0 overflow-x-hidden">
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 md:mb-10 gap-4">
         <div>
           <p className="text-gold text-xs uppercase tracking-[0.3em] mb-1">Admin Dashboard</p>
@@ -103,14 +131,14 @@ export default function AdminPage() {
         <Link href="/" className="btn-dark text-xs self-start sm:self-auto">← View Site</Link>
       </div>
 
-      <div className="flex gap-1 border-b border-white/10 mb-6 overflow-x-auto no-scrollbar" style={{WebkitOverflowScrolling:"touch"}}>
+      <div className="flex gap-0 sm:gap-1 border-b border-white/10 mb-4 sm:mb-6 overflow-x-auto no-scrollbar -mx-3 px-3 sm:mx-0 sm:px-0 w-[calc(100%+1.5rem)] sm:w-full" style={{WebkitOverflowScrolling:"touch"}}>
         {tabs.map(t => {
           const Icon = t.icon
           return (
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
-              className={`flex items-center gap-2 px-4 sm:px-5 py-3 text-xs uppercase tracking-widest font-semibold transition-colors whitespace-nowrap ${tab === t.id ? 'text-gold border-b-2 border-gold' : 'text-white/50 hover:text-white'}`}
+              className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2.5 sm:py-3 text-[11px] sm:text-xs uppercase tracking-widest font-semibold transition-colors whitespace-nowrap ${tab === t.id ? 'text-gold border-b-2 border-gold' : 'text-white/50 hover:text-white'}`}
             >
               <Icon size={16} /> {t.label}
             </button>
@@ -140,12 +168,13 @@ export default function AdminPage() {
         </>
       )}
     </div>
+    </>
   )
 }
 
 function NoAccessMessage({ feature, description }) {
   return (
-    <div className="py-16 sm:py-20 text-center bg-dark-card border border-white/10 p-6">
+    <div className="py-10 sm:py-20 text-center bg-dark-card border border-white/10 p-4 sm:p-6">
       <Shield size={40} className="text-gold/60 mx-auto mb-4" />
       <p className="font-display text-xl sm:text-2xl uppercase text-white mb-2">{feature}</p>
       <p className="text-white/50 text-sm max-w-md mx-auto">{description}</p>
@@ -238,8 +267,8 @@ function ArtistsManager({ artists, onRefresh }) {
   }
 
   return (
-    <div className="grid lg:grid-cols-2 gap-4 md:gap-8">
-      <form onSubmit={save} className="bg-dark-card border border-white/10 p-4 sm:p-6 space-y-4 h-fit order-2 lg:order-1">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 min-w-0">
+      <form onSubmit={save} className="bg-dark-card border border-white/10 p-3 sm:p-6 space-y-3 sm:space-y-4 h-fit order-2 lg:order-1 min-w-0">
         <h3 className="font-display text-xl uppercase text-white mb-2">{editing ? 'Edit Artist' : 'Add New Artist'}</h3>
         <input required placeholder="Artist Name *" value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="form-input" />
         <input placeholder="Title (e.g. Vocal Powerhouse)" value={form.title} onChange={e => setForm({...form, title: e.target.value})} className="form-input" />
@@ -259,17 +288,17 @@ function ArtistsManager({ artists, onRefresh }) {
         )}
         <div>
           <label className="block text-xs uppercase tracking-widest text-white/50 mb-2">Image (upload or paste URL)</label>
-          <input type="file" accept="image/*" onChange={e => uploadFile(e, 'image')} className="text-xs text-white/60 mb-2 block w-full" />
+          <input type="file" accept="image/*" onChange={e => uploadFile(e, 'image')} className="text-[10px] sm:text-xs text-white/60 mb-2 block w-full min-w-0 truncate" />
           <input placeholder="https://... or /uploads/images/..." value={form.image} onChange={e => setForm({...form, image: e.target.value})} className="form-input" />
-          {form.image && <img src={form.image} alt="" className="mt-2 max-h-32 border border-white/10 max-w-full object-contain" />}
+          {form.image && <img src={form.image} alt="" className="mt-2 max-h-32 border border-white/10 max-w-full object-contain rounded" />}
         </div>
         <div>
           <label className="block text-xs uppercase tracking-widest text-white/50 mb-2">Opening Video (upload or paste URL)</label>
-          <input type="file" accept="video/*" onChange={e => uploadFile(e, 'videoUrl')} className="text-xs text-white/60 mb-2 block w-full" />
+          <input type="file" accept="video/*" onChange={e => uploadFile(e, 'videoUrl')} className="text-[10px] sm:text-xs text-white/60 mb-2 block w-full min-w-0 truncate" />
           <input placeholder="YouTube, TikTok, MP4 URL, or /uploads/videos/..." value={form.videoUrl} onChange={e => setForm({...form, videoUrl: e.target.value})} className="form-input" />
         </div>
         <div className="flex gap-3">
-          <button type="submit" disabled={saving} className="btn-gold flex-1 disabled:opacity-60">{saving ? 'Saving...' : (editing ? 'Update' : 'Add Artist')}</button>
+          <button type="submit" disabled={saving} className="btn-gold flex-1 disabled:opacity-60 text-xs sm:text-sm py-2.5">{saving ? 'Saving...' : (editing ? 'Update' : 'Add Artist')}</button>
           {editing && <button type="button" onClick={reset} className="btn-dark">Cancel</button>}
         </div>
       </form>
@@ -290,29 +319,29 @@ function ArtistsManager({ artists, onRefresh }) {
           {filtered.filter(a => a.isGroup).map(a => {
             const memberCount = artists.filter(m => m.groupId && String(m.groupId) === String(a._id)).length
             return (
-              <div key={a._id} className="flex items-center gap-3 bg-dark-card border border-white/5 p-3 sm:p-4">
+              <div key={a._id} className="flex items-center gap-2 sm:gap-3 bg-dark-card border border-white/5 p-2.5 sm:p-4 min-w-0">
                 {a.image ? <img src={a.image} className="w-12 h-12 sm:w-14 sm:h-14 object-cover flex-shrink-0" /> : <div className="w-12 h-12 sm:w-14 sm:h-14 bg-dark-light flex items-center justify-center text-white/30 text-lg font-display">{a.name?.[0]}</div>}
                 <div className="flex-1 min-w-0">
                   <p className="font-display text-white uppercase truncate text-sm sm:text-base">{a.name} <span className="text-gold text-[10px] ml-1 bg-gold/20 px-1.5 py-0.5">GROUP</span></p>
                   <p className="text-white/40 text-xs truncate">{a.title}</p>
                   <p className="text-gold/60 text-[10px] mt-0.5">{memberCount} member{memberCount !== 1 ? 's' : ''}</p>
                 </div>
-                <button onClick={() => startEdit(a)} className="text-white/60 hover:text-gold p-2 flex-shrink-0"><Edit size={16} /></button>
-                <button onClick={() => del(a._id)} className="text-red-400/60 hover:text-red-400 p-2 flex-shrink-0"><Trash2 size={16} /></button>
+                <button onClick={() => startEdit(a)} className="text-white/60 hover:text-gold p-1.5 sm:p-2 flex-shrink-0"><Edit size={16} /></button>
+                <button onClick={() => del(a._id)} className="text-red-400/60 hover:text-red-400 p-1.5 sm:p-2 flex-shrink-0"><Trash2 size={16} /></button>
               </div>
             )
           })}
           {filtered.filter(a => !a.isGroup).map(a => {
             const parentGroup = a.groupId ? groups.find(g => String(g._id) === String(a.groupId)) : null
             return (
-              <div key={a._id} className="flex items-center gap-3 bg-dark-card border border-white/5 p-3 sm:p-4">
+              <div key={a._id} className="flex items-center gap-2 sm:gap-3 bg-dark-card border border-white/5 p-2.5 sm:p-4 min-w-0">
                 {a.image ? <img src={a.image} className="w-12 h-12 sm:w-14 sm:h-14 object-cover flex-shrink-0" /> : <div className="w-12 h-12 sm:w-14 sm:h-14 bg-dark-light flex items-center justify-center text-white/30 text-lg font-display">{a.name?.[0]}</div>}
                 <div className="flex-1 min-w-0">
                   <p className="font-display text-white uppercase truncate text-sm sm:text-base">{a.name}</p>
                   <p className="text-white/40 text-xs truncate">{a.title}{parentGroup && <span className="text-gold/60"> · {parentGroup.name}</span>}</p>
                 </div>
-                <button onClick={() => startEdit(a)} className="text-white/60 hover:text-gold p-2 flex-shrink-0"><Edit size={16} /></button>
-                <button onClick={() => del(a._id)} className="text-red-400/60 hover:text-red-400 p-2 flex-shrink-0"><Trash2 size={16} /></button>
+                <button onClick={() => startEdit(a)} className="text-white/60 hover:text-gold p-1.5 sm:p-2 flex-shrink-0"><Edit size={16} /></button>
+                <button onClick={() => del(a._id)} className="text-red-400/60 hover:text-red-400 p-1.5 sm:p-2 flex-shrink-0"><Trash2 size={16} /></button>
               </div>
             )
           })}
@@ -397,8 +426,8 @@ function MusicManager({ tracks, onRefresh }) {
   }
 
   return (
-    <div className="grid lg:grid-cols-2 gap-4 md:gap-8">
-      <form onSubmit={save} className="bg-dark-card border border-white/10 p-4 sm:p-6 space-y-4 h-fit">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 min-w-0">
+      <form onSubmit={save} className="bg-dark-card border border-white/10 p-3 sm:p-6 space-y-3 sm:space-y-4 h-fit min-w-0">
         <h3 className="font-display text-xl uppercase text-white mb-2">{editing ? 'Edit Track' : 'Upload New Track'}</h3>
         <input required placeholder="Track Title *" value={form.title} onChange={e => setForm({...form, title: e.target.value})} className="form-input" />
         <div>
@@ -415,22 +444,22 @@ function MusicManager({ tracks, onRefresh }) {
         <input placeholder="Album (optional)" value={form.album} onChange={e => setForm({...form, album: e.target.value})} className="form-input" />
         <div>
           <label className="block text-xs uppercase tracking-widest text-white/50 mb-2">Audio File (MP3/WAV) {editing ? '(leave empty to keep current)' : '*'}</label>
-          <input type="file" accept="audio/*" onChange={e => uploadFile(e, 'audioUrl', 'audio')} className="text-xs text-white/60 mb-2 block w-full" />
+          <input type="file" accept="audio/*" onChange={e => uploadFile(e, 'audioUrl', 'audio')} className="text-[10px] sm:text-xs text-white/60 mb-2 block w-full min-w-0 truncate" />
           <input placeholder="or paste URL to MP3" value={form.audioUrl} onChange={e => setForm({...form, audioUrl: e.target.value})} className="form-input" />
           {form.audioUrl && (
             <div className="mt-2 bg-dark-light p-2">
-              <audio src={form.audioUrl} controls className="w-full h-8" />
+              <audio src={form.audioUrl} controls className="w-full max-w-full h-8" style={{maxWidth:"100%"}} />
               <p className="text-green-400 text-xs mt-1">✅ Audio ready</p>
             </div>
           )}
         </div>
         <div>
           <label className="block text-xs uppercase tracking-widest text-white/50 mb-2">Cover Image</label>
-          <input type="file" accept="image/*" onChange={e => uploadFile(e, 'coverImage', 'images')} className="text-xs text-white/60 mb-2 block w-full" />
+          <input type="file" accept="image/*" onChange={e => uploadFile(e, 'coverImage', 'images')} className="text-[10px] sm:text-xs text-white/60 mb-2 block w-full min-w-0 truncate" />
           <input placeholder="or paste URL" value={form.coverImage} onChange={e => setForm({...form, coverImage: e.target.value})} className="form-input" />
         </div>
         <div className="flex gap-3">
-          <button type="submit" disabled={saving || (!editing && !form.audioUrl)} className="btn-gold flex-1 disabled:opacity-60">{saving ? 'Saving...' : (editing ? 'Update Track' : 'Add Track')}</button>
+          <button type="submit" disabled={saving || (!editing && !form.audioUrl)} className="btn-gold flex-1 disabled:opacity-60 text-xs sm:text-sm py-2.5">{saving ? 'Saving...' : (editing ? 'Update Track' : 'Add Track')}</button>
           {editing && <button type="button" onClick={reset} className="btn-dark">Cancel</button>}
         </div>
       </form>
@@ -444,14 +473,14 @@ function MusicManager({ tracks, onRefresh }) {
         <div className="space-y-2 max-h-[600px] overflow-y-auto pr-1">
           {filtered.length === 0 && <p className="text-white/40 text-sm">{query ? 'No tracks match' : 'No tracks yet. Upload one to get started.'}</p>}
           {filtered.map(t => (
-            <div key={t._id} className={`flex items-center gap-3 bg-dark-card border p-3 sm:p-4 ${editing && editing._id === t._id ? 'border-gold/40' : 'border-white/5'}`}>
+            <div key={t._id} className={`flex items-center gap-2 sm:gap-3 bg-dark-card border p-2.5 sm:p-4 min-w-0 ${editing && editing._id === t._id ? 'border-gold/40' : 'border-white/5'}`}>
               {t.coverImage ? <img src={t.coverImage} className="w-12 h-12 object-cover flex-shrink-0" /> : <div className="w-12 h-12 bg-dark-light flex items-center justify-center gold-text text-xl">♪</div>}
               <div className="flex-1 min-w-0">
                 <p className="font-display text-white uppercase truncate text-sm sm:text-base">{t.title} {editing && editing._id === t._id && <span className="text-gold text-[10px] bg-gold/20 px-1.5 py-0.5 ml-1">EDITING</span>}</p>
                 <p className="text-white/40 text-xs truncate">{t.artistName}{t.album ? ` • ${t.album}` : ''}</p>
               </div>
-              <button onClick={() => startEdit(t)} className="text-white/60 hover:text-gold p-2 flex-shrink-0" title="Edit track"><Edit size={16} /></button>
-              <button onClick={() => del(t._id)} className="text-red-400/60 hover:text-red-400 p-2 flex-shrink-0" title="Delete track"><Trash2 size={16} /></button>
+              <button onClick={() => startEdit(t)} className="text-white/60 hover:text-gold p-1.5 sm:p-2 flex-shrink-0" title="Edit track"><Edit size={16} /></button>
+              <button onClick={() => del(t._id)} className="text-red-400/60 hover:text-red-400 p-1.5 sm:p-2 flex-shrink-0" title="Delete track"><Trash2 size={16} /></button>
             </div>
           ))}
         </div>
@@ -640,7 +669,7 @@ function DonationsView({ isSuperAdmin }) {
           <span>Owner access: click a status badge to change it, or use the ✕ button to remove a gift record. Statuses auto-update to <strong>completed</strong> when PayMongo confirms a paid payment.</span>
         </div>
       )}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 md:gap-4 mb-5 sm:mb-6">
         <div className="bg-dark-card border border-white/10 p-4 sm:p-5">
           <p className="text-[10px] sm:text-xs uppercase text-white/50 tracking-widest">Total Gifts</p>
           <p className="font-display text-2xl sm:text-3xl gold-text mt-1 sm:mt-2">{pagination.total.toLocaleString()}</p>
@@ -662,12 +691,12 @@ function DonationsView({ isSuperAdmin }) {
           <p className="text-white/30 text-[10px] mt-1">pending/failed/refunded</p>
         </div>
       </div>
-      <div className="flex flex-col sm:flex-row gap-3 mb-4">
+      <div className="flex flex-col gap-2 sm:gap-3 mb-4">
         <div className="relative flex-1">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
-          <input type="text" placeholder="Search by fan, email, artist, ref, payment ID..." value={query} onChange={e => setQuery(e.target.value)} className="form-input pl-10" />
+          <input type="text" placeholder="Search by fan, email, artist, ref, payment ID..." value={query} onChange={e => setQuery(e.target.value)} className="form-input pl-10 text-sm" />
         </div>
-        <div className="flex gap-1 overflow-x-auto no-scrollbar" style={{WebkitOverflowScrolling:"touch"}}>
+        <div className="flex gap-2 items-center flex-wrap sm:flex-nowrap overflow-x-auto no-scrollbar" style={{WebkitOverflowScrolling:"touch"}}>
           {['all', 'completed', 'pending', 'failed', 'refunded'].map(s => (
             <button key={s} onClick={() => setStatusFilter(s)} className={`px-3 py-2 text-xs uppercase tracking-wider font-semibold transition-colors flex-shrink-0 ${statusFilter === s ? 'bg-gold text-dark' : 'bg-white/5 text-white/60 hover:bg-white/10'}`}>{s}</button>
           ))}
@@ -675,12 +704,12 @@ function DonationsView({ isSuperAdmin }) {
         <button
           onClick={exportData}
           disabled={exporting}
-          className="flex items-center justify-center gap-2 px-4 py-2 bg-gold/10 border border-gold/30 text-gold text-xs uppercase tracking-wider font-semibold hover:bg-gold/20 transition-colors disabled:opacity-50 flex-shrink-0">
-          <Download size={14} /> {exporting ? 'Exporting...' : 'Export Data'}
+          className="flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2 bg-gold/10 border border-gold/30 text-gold text-[11px] sm:text-xs uppercase tracking-wider font-semibold hover:bg-gold/20 transition-colors disabled:opacity-50 flex-shrink-0 w-full sm:w-auto">
+          <Download size={14} /> <span className="whitespace-nowrap">{exporting ? 'Export...' : 'Export Data'}</span>
         </button>
       </div>
-      <div className="bg-dark-card border border-white/10 overflow-x-auto no-scrollbar" style={{WebkitOverflowScrolling:"touch"}}>
-        <table className="w-full text-sm">
+      <div className="bg-dark-card border-white/10 overflow-x-auto no-scrollbar -mx-3 sm:mx-0 w-[calc(100%+1.5rem)] sm:w-full" style={{WebkitOverflowScrolling:"touch"}}>
+        <table className="w-full text-sm" style={{minWidth:"760px"}}>
           <thead>
             <tr className="border-b border-white/10 text-left">
               <th className="p-3 sm:p-4 text-[10px] sm:text-xs uppercase text-white/50 tracking-widest">Date</th>
@@ -740,11 +769,11 @@ function DonationsView({ isSuperAdmin }) {
 
       {/* Pagination controls */}
       {pagination.totalPages > 1 && (
-        <div className="flex items-center justify-center gap-1 sm:gap-2 mt-6 flex-wrap">
+        <div className="flex items-center justify-center gap-1 sm:gap-2 mt-5 sm:mt-6 flex-wrap px-1">
           <button
             onClick={() => goToPage(page - 1)}
             disabled={page <= 1 || loading}
-            className="px-3 py-2 text-xs uppercase tracking-wider font-semibold bg-white/5 text-white/70 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
+            className="px-2.5 sm:px-3 py-1.5 sm:py-2 text-[11px] sm:text-xs uppercase tracking-wider font-semibold bg-white/5 text-white/70 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
             ← Prev
           </button>
           {pageNumbers.map((p, i) => p === null ? (
@@ -754,14 +783,14 @@ function DonationsView({ isSuperAdmin }) {
               key={p}
               onClick={() => goToPage(p)}
               disabled={loading}
-              className={`min-w-[36px] h-9 px-2 sm:px-3 text-xs font-semibold transition-colors ${p === page ? 'bg-gold text-dark' : 'bg-white/5 text-white/70 hover:bg-white/10'}`}>
+              className={`min-w-[32px] sm:min-w-[36px] h-8 sm:h-9 px-1.5 sm:px-3 text-[11px] sm:text-xs font-semibold transition-colors ${p === page ? 'bg-gold text-dark' : 'bg-white/5 text-white/70 hover:bg-white/10'}`}>
               {p}
             </button>
           ))}
           <button
             onClick={() => goToPage(page + 1)}
             disabled={page >= pagination.totalPages || loading}
-            className="px-3 py-2 text-xs uppercase tracking-wider font-semibold bg-white/5 text-white/70 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
+            className="px-2.5 sm:px-3 py-1.5 sm:py-2 text-[11px] sm:text-xs uppercase tracking-wider font-semibold bg-white/5 text-white/70 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
             Next →
           </button>
         </div>
@@ -997,7 +1026,7 @@ function MusicActivityView() {
         <span>Owner-only analytics: see exactly who played your tracks and who downloaded them (signed-in Google users only). Anonymous/guest streams are not tracked — guests can still listen free without being logged.</span>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 md:gap-4 mb-5 sm:mb-6">
         <div className="bg-dark-card border border-white/10 p-4 sm:p-5">
           <p className="text-[10px] sm:text-xs uppercase text-white/50 tracking-widest">Total Activity</p>
           <p className="font-display text-2xl sm:text-3xl text-white mt-1 sm:mt-2">{pagination.total.toLocaleString()}</p>
@@ -1020,12 +1049,12 @@ function MusicActivityView() {
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-3 mb-4">
+      <div className="flex flex-col gap-2 sm:gap-3 mb-4">
         <div className="relative flex-1">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
-          <input type="text" placeholder="Search by name, email, track, artist..." value={query} onChange={e => setQuery(e.target.value)} className="form-input pl-10" />
+          <input type="text" placeholder="Search by name, email, track, artist..." value={query} onChange={e => setQuery(e.target.value)} className="form-input pl-10 text-sm" />
         </div>
-        <div className="flex gap-1 overflow-x-auto no-scrollbar" style={{WebkitOverflowScrolling:"touch"}}>
+        <div className="flex gap-2 items-center flex-wrap sm:flex-nowrap overflow-x-auto no-scrollbar" style={{WebkitOverflowScrolling:"touch"}}>
           {[
             { id: 'all', label: 'All', icon: Activity },
             { id: 'play', label: 'Plays', icon: Play },
@@ -1042,14 +1071,14 @@ function MusicActivityView() {
         </div>
         <button
           onClick={() => setBulkOpen(!bulkOpen)}
-          className="flex items-center justify-center gap-2 px-4 py-2 bg-red-500/10 border border-red-500/30 text-red-300 text-xs uppercase tracking-wider font-semibold hover:bg-red-500/20 transition-colors flex-shrink-0">
-          <Trash2 size={14} /> Manage Data
+          className="flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2 bg-red-500/10 border border-red-500/30 text-red-300 text-[11px] sm:text-xs uppercase tracking-wider font-semibold hover:bg-red-500/20 transition-colors flex-shrink-0">
+          <Trash2 size={14} /> Manage
         </button>
         <button
           onClick={exportData}
           disabled={exporting}
-          className="flex items-center justify-center gap-2 px-4 py-2 bg-gold/10 border border-gold/30 text-gold text-xs uppercase tracking-wider font-semibold hover:bg-gold/20 transition-colors disabled:opacity-50 flex-shrink-0">
-          <Download size={14} /> {exporting ? 'Exporting...' : 'Export Data'}
+          className="flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2 bg-gold/10 border border-gold/30 text-gold text-[11px] sm:text-xs uppercase tracking-wider font-semibold hover:bg-gold/20 transition-colors disabled:opacity-50 flex-shrink-0">
+          <Download size={14} /> {exporting ? 'Export...' : 'Export'}
         </button>
       </div>
 
@@ -1108,13 +1137,13 @@ function MusicActivityView() {
               className="btn-gold bg-red-500 hover:bg-red-600 border-red-500 text-white disabled:opacity-60 flex-1 flex items-center justify-center gap-2">
               <Trash2 size={14} /> {deleting ? 'Deleting...' : 'Delete Permanently'}
             </button>
-            <button onClick={() => setBulkOpen(false)} className="btn-dark">Cancel</button>
+            <button onClick={() => setBulkOpen(false)} className="btn-dark w-full sm:w-auto">Cancel</button>
           </div>
         </div>
       )}
 
-      <div className="bg-dark-card border border-white/10 overflow-x-auto no-scrollbar" style={{WebkitOverflowScrolling:"touch"}}>
-        <table className="w-full text-sm">
+      <div className="bg-dark-card border-white/10 overflow-x-auto no-scrollbar -mx-3 sm:mx-0 w-[calc(100%+1.5rem)] sm:w-full" style={{WebkitOverflowScrolling:"touch"}}>
+        <table className="w-full text-sm" style={{minWidth:"760px"}}>
           <thead>
             <tr className="border-b border-white/10 text-left">
               <th className="p-3 sm:p-4 text-[10px] sm:text-xs uppercase text-white/50 tracking-widest">Date & Time</th>
@@ -1169,21 +1198,21 @@ function MusicActivityView() {
       </div>
 
       {pagination.totalPages > 1 && (
-        <div className="flex items-center justify-center gap-1 sm:gap-2 mt-6 flex-wrap">
+        <div className="flex items-center justify-center gap-1 sm:gap-2 mt-5 sm:mt-6 flex-wrap px-1">
           <button onClick={() => goToPage(page - 1)} disabled={page <= 1 || loading}
-            className="px-3 py-2 text-xs uppercase tracking-wider font-semibold bg-white/5 text-white/70 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
+            className="px-2.5 sm:px-3 py-1.5 sm:py-2 text-[11px] sm:text-xs uppercase tracking-wider font-semibold bg-white/5 text-white/70 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
             ← Prev
           </button>
           {pageNumbers.map((p, i) => p === null ? (
             <span key={'e'+i} className="text-white/30 px-1">…</span>
           ) : (
             <button key={p} onClick={() => goToPage(p)} disabled={loading}
-              className={`min-w-[36px] h-9 px-2 sm:px-3 text-xs font-semibold transition-colors ${p === page ? 'bg-gold text-dark' : 'bg-white/5 text-white/70 hover:bg-white/10'}`}>
+              className={`min-w-[32px] sm:min-w-[36px] h-8 sm:h-9 px-1.5 sm:px-3 text-[11px] sm:text-xs font-semibold transition-colors ${p === page ? 'bg-gold text-dark' : 'bg-white/5 text-white/70 hover:bg-white/10'}`}>
               {p}
             </button>
           ))}
           <button onClick={() => goToPage(page + 1)} disabled={page >= pagination.totalPages || loading}
-            className="px-3 py-2 text-xs uppercase tracking-wider font-semibold bg-white/5 text-white/70 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
+            className="px-2.5 sm:px-3 py-1.5 sm:py-2 text-[11px] sm:text-xs uppercase tracking-wider font-semibold bg-white/5 text-white/70 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
             Next →
           </button>
         </div>
@@ -1272,8 +1301,8 @@ function AdminsManager({ admins, onRefresh }) {
         </div>
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-4 md:gap-8">
-        <form onSubmit={addAdmin} className="bg-dark-card border border-white/10 p-4 sm:p-6 space-y-4 h-fit order-2 lg:order-1">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 min-w-0">
+        <form onSubmit={addAdmin} className="bg-dark-card border border-white/10 p-3 sm:p-6 space-y-3 sm:space-y-4 h-fit order-2 lg:order-1 min-w-0">
           <h3 className="font-display text-xl uppercase text-white mb-2 flex items-center gap-2">
             <UserPlus size={20} className="text-gold" /> Add New Admin
           </h3>
@@ -1337,7 +1366,7 @@ function AdminsManager({ admins, onRefresh }) {
                     </div>
                     {!isOwner && (
                       <button onClick={() => removeAdmin(a)} disabled={savingPermId === a._id}
-                        className="text-red-400/60 hover:text-red-400 hover:bg-red-500/10 p-2 flex-shrink-0" title="Remove admin">
+                        className="text-red-400/60 hover:text-red-400 hover:bg-red-500/10 p-1.5 sm:p-2 flex-shrink-0" title="Remove admin">
                         <UserMinus size={16} />
                       </button>
                     )}

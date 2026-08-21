@@ -14,7 +14,7 @@ const faqs = [
 
 export default function FAQClient() {
   return (
-    <div className="relative flex-1 flex flex-col"
+    <div className="relative flex-1 flex flex-col cinematic-dark"
       style={{ minHeight: 'calc(100dvh - var(--nav-h))' }}>
       {/* Black leather texture background */}
       <div aria-hidden="true" className="absolute inset-0 bg-[#0a0806]" />

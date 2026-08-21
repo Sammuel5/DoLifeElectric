@@ -56,9 +56,9 @@ coverage/
 
 # Uploaded user content — can contain large files and user data
 # (safe to keep local but not commit)
-# public/uploads/*
-# uploads/
-# !public/uploads/.gitkeep
+public/uploads/*
+uploads/
+!public/uploads/.gitkeep
 
 # OS temp
 tmp/

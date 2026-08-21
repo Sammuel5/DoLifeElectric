@@ -1,12 +1,16 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
+import { useTheme } from './ThemeProvider'
 
 // Custom DLE cursor: gold ring + mini DLE shield logo in center + short fading particle trail.
 // Desktop/laptop only — automatically hides on touch devices (mobile/tablet).
 // - Default: ring + gold DLE logo (tinted from the real logo)
 // - Hover over clickables: logo grows slightly (subtle scale) + glows gold
 // - Click (mousedown): logo "pops" a little bigger, flashes bright gold glow
+// - Light mode: slightly deeper bronze ring for visibility on ivory/white.
 export default function CustomCursor() {
+  const { theme, mounted } = useTheme()
+  const isDark = !mounted ? true : theme === 'dark'
   const ringRef = useRef(null)
   const shieldRef = useRef(null)
   const trailRef = useRef(null)
@@ -26,6 +30,9 @@ export default function CustomCursor() {
   // Smoothly interpolate scale toward targets based on state
   const targetShieldScale = useRef(1)
   const targetRingScale = useRef(1)
+  // Ref used inside RAF loop for live theme color
+  const isDarkRef = useRef(isDark)
+  useEffect(() => { isDarkRef.current = isDark }, [isDark])
 
   useEffect(() => {
     // Hover scale: 1 → 1.25 (noticeable but not huge)
@@ -152,6 +159,7 @@ export default function CustomCursor() {
       // Render particle trail
       if (trailRef.current) {
         particles.current = particles.current.filter(p => p.age < 1)
+        const particleRGB = isDarkRef.current ? '201,168,76' : '138,117,48'
         let html = ''
         for (let i = particles.current.length - 1; i >= 0; i--) {
           const p = particles.current[i]
@@ -159,7 +167,7 @@ export default function CustomCursor() {
           if (p.age < 1) {
             const opacity = (1 - p.age) * 0.55
             const size = p.size * (1 - p.age * 0.7)
-            html += `<div style="position:absolute;left:${p.x}px;top:${p.y}px;width:${size}px;height:${size}px;border-radius:50%;background:rgba(201,168,76,${opacity});transform:translate(-50%,-50%);pointer-events:none"></div>`
+            html += `<div style="position:absolute;left:${p.x}px;top:${p.y}px;width:${size}px;height:${size}px;border-radius:50%;background:rgba(${particleRGB},${opacity});transform:translate(-50%,-50%);pointer-events:none"></div>`
           }
         }
         trailRef.current.innerHTML = html
@@ -193,7 +201,7 @@ export default function CustomCursor() {
         style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 9998 }}
       />
 
-      {/* Outer gold ring */}
+      {/* Outer ring — gold in dark, deeper bronze in light */}
       <div
         ref={ringRef}
         aria-hidden="true"
@@ -202,13 +210,15 @@ export default function CustomCursor() {
           top: 0, left: 0,
           width: 30, height: 30,
           borderRadius: '50%',
-          border: '1.5px solid #C9A84C',
+          border: `1.5px solid ${isDark ? '#C9A84C' : '#8A7530'}`,
           pointerEvents: 'none',
           zIndex: 9999,
           willChange: 'transform',
-          boxShadow: '0 0 8px rgba(201,168,76,0.15)',
+          boxShadow: isDark
+            ? '0 0 8px rgba(201,168,76,0.15)'
+            : '0 0 8px rgba(138,117,48,0.25)',
           opacity: 0,
-          transition: 'opacity 0.3s',
+          transition: 'opacity 0.3s, border-color 0.4s, box-shadow 0.4s',
         }}
       />
 
@@ -237,7 +247,10 @@ export default function CustomCursor() {
             width: '100%',
             height: '100%',
             objectFit: 'contain',
-            filter: 'brightness(0) saturate(100%) invert(73%) sepia(45%) saturate(580%) hue-rotate(5deg) brightness(92%) contrast(89%)',
+            // Dark mode: bright gold. Light mode: slightly deeper bronze for contrast on ivory.
+            filter: isDark
+              ? 'brightness(0) saturate(100%) invert(73%) sepia(45%) saturate(580%) hue-rotate(5deg) brightness(92%) contrast(89%)'
+              : 'brightness(0) saturate(100%) invert(52%) sepia(74%) saturate(390%) hue-rotate(8deg) brightness(90%) contrast(88%)',
             userSelect: 'none',
             pointerEvents: 'none',
             display: 'block',
@@ -248,6 +261,7 @@ export default function CustomCursor() {
       </div>
 
       <style jsx global>{`
+        /* Dark mode glows (default) */
         .dle-cursor-shield.hovering .dle-cursor-logo {
           filter: brightness(0) saturate(100%) invert(78%) sepia(42%) saturate(620%) hue-rotate(5deg) brightness(97%) contrast(90%)
                   drop-shadow(0 0 5px rgba(230,199,106,0.95))
@@ -257,6 +271,23 @@ export default function CustomCursor() {
           filter: brightness(0) saturate(100%) invert(88%) sepia(25%) saturate(600%) hue-rotate(2deg) brightness(108%) contrast(95%)
                   drop-shadow(0 0 10px rgba(255,240,180,1))
                   drop-shadow(0 0 22px rgba(230,199,106,0.95));
+        }
+        /* Light mode glows — slightly deeper bronze so they read on white */
+        html.light .dle-cursor-shield .dle-cursor-logo,
+        html[data-theme="light"] .dle-cursor-shield .dle-cursor-logo {
+          filter: brightness(0) saturate(100%) invert(52%) sepia(74%) saturate(390%) hue-rotate(8deg) brightness(90%) contrast(88%);
+        }
+        html.light .dle-cursor-shield.hovering .dle-cursor-logo,
+        html[data-theme="light"] .dle-cursor-shield.hovering .dle-cursor-logo {
+          filter: brightness(0) saturate(100%) invert(56%) sepia(60%) saturate(420%) hue-rotate(8deg) brightness(95%) contrast(90%)
+                  drop-shadow(0 0 6px rgba(184,148,63,0.9))
+                  drop-shadow(0 0 14px rgba(138,117,48,0.55));
+        }
+        html.light .dle-cursor-shield.clicked .dle-cursor-logo,
+        html[data-theme="light"] .dle-cursor-shield.clicked .dle-cursor-logo {
+          filter: brightness(0) saturate(100%) invert(64%) sepia(40%) saturate(500%) hue-rotate(4deg) brightness(100%) contrast(92%)
+                  drop-shadow(0 0 10px rgba(201,168,76,0.9))
+                  drop-shadow(0 0 20px rgba(184,148,63,0.8));
         }
         iframe, video { cursor: none !important; }
         body.over-text-input .dle-cursor-ring,

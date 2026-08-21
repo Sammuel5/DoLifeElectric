@@ -4,10 +4,56 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ========== Navbar height variables (kept in sync with components/Navbar.js) ==========
-   Mobile/tablet (portrait+landscape, <lg): 56px → 64px.
-   Desktop (lg+, ≥1024px): 88px.
-   Use `calc(100dvh - var(--nav-h))` for hero/full-screen sections. */
+/* ========== Theme variables ==========
+   We use CSS custom properties on the root so both dark (default) and light
+   modes have their own thoughtfully-designed palettes — not simple color-inversion.
+   Dark = cinematic black + gold (DLE signature).
+   Light = warm ivory/parchment + deep charcoal + gold (editorial / premium feel). */
+:root {
+  --bg: #0A0A0A;
+  --bg-elev: #141414;
+  --bg-card: #1A1A1A;
+  --text: #FFFFFF;
+  --text-muted: rgba(255,255,255,0.6);
+  --text-dim: rgba(255,255,255,0.4);
+  --border: rgba(255,255,255,0.10);
+  --border-strong: rgba(255,255,255,0.20);
+  --gold: #C9A84C;
+  --gold-bright: #E6C76A;
+  --gold-dim: rgba(201,168,76,0.25);
+  --input-bg: #1A1A1A;
+  --shadow: 0 4px 24px rgba(0,0,0,0.4);
+  --scrollbar-track: #0A0A0A;
+  --scrollbar-thumb: #C9A84C;
+  --toast-bg: #1A1A1A;
+  --toast-border: rgba(201,168,76,0.3);
+  --overlay: rgba(0,0,0,0.85);
+  --card-gradient: linear-gradient(180deg, #1f1f1f 0%, #141414 100%);
+}
+
+html.light, html[data-theme="light"] {
+  --bg: #F7F3EB;
+  --bg-elev: #FFFFFF;
+  --bg-card: #FBF8F2;
+  --text: #1A1713;
+  --text-muted: rgba(26,23,19,0.65);
+  --text-dim: rgba(26,23,19,0.40);
+  --border: rgba(60,50,20,0.12);
+  --border-strong: rgba(60,50,20,0.25);
+  --gold: #8A7530;
+  --gold-bright: #B8943F;
+  --gold-dim: rgba(138,117,48,0.18);
+  --input-bg: #FFFFFF;
+  --shadow: 0 1px 3px rgba(60,50,20,0.06), 0 8px 24px rgba(60,50,20,0.06);
+  --scrollbar-track: #F7F3EB;
+  --scrollbar-thumb: #B8943F;
+  --toast-bg: #1A1713;
+  --toast-border: rgba(184,148,63,0.35);
+  --overlay: rgba(247,243,235,0.88);
+  --card-gradient: linear-gradient(180deg, #FFFFFF 0%, #FBF8F2 100%);
+}
+
+/* ========== Navbar height variables ========== */
 :root { --nav-h: 56px; }
 @media (min-width: 640px)  { :root { --nav-h: 64px; } }
 @media (min-width: 1024px) { :root { --nav-h: 88px; } }
@@ -16,7 +62,7 @@
 * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
 html, body { max-width: 100%; overflow-x: hidden; -webkit-text-size-adjust: 100%; }
 img, video { max-width: 100%; height: auto; }
-input, select, textarea, button { font-size: 16px; } /* Prevents iOS zoom on focus */
+input, select, textarea, button { font-size: 16px; }
 button { cursor: pointer; -webkit-appearance: none; appearance: none; touch-action: manipulation; }
 select { -webkit-appearance: none; appearance: none; background-position: right 0.75rem center; background-repeat: no-repeat; }
 
@@ -24,30 +70,74 @@ html { scroll-behavior: smooth; height: 100%; }
 html[data-scroll-behavior="auto"] { scroll-behavior: auto; }
 
 body {
-  background-color: #0A0A0A;
-  color: #fff;
+  background-color: var(--bg);
+  color: var(--text);
   font-family: 'Inter', system-ui, sans-serif;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   min-height: 100%;
   min-height: 100dvh;
   padding-bottom: env(safe-area-inset-bottom, 0);
+  transition: background-color 0.4s ease, color 0.4s ease;
+}
+
+/* Smooth transitions on surface elements when theme changes */
+.surface-card,
+.surface-elevated,
+.form-input,
+.btn-dark {
+  transition: background-color 0.35s ease, color 0.35s ease, border-color 0.35s ease, box-shadow 0.35s ease;
+}
+
+/* =========================================================================
+   Cinematic pages (Home / About / Artists / Music) are designed exclusively
+   for the black/gold aesthetic with photographic content on dark backdrops.
+   Force dark-mode colors within these subtrees even when the global theme
+   is set to "light" so imagery, overlays, and gold typography stay correct.
+   Non-marketing surfaces (Admin, Login, Contact, FAQ, Terms, Privacy)
+   fully support both themes via CSS variables.
+   ========================================================================= */
+.cinematic-dark,
+.cinematic-dark * {
+  color-scheme: dark !important;
+}
+.cinematic-dark {
+  background-color: #0A0A0A !important;
+  color: #fff !important;
+  --bg: #0A0A0A !important;
+  --bg-elev: #141414 !important;
+  --bg-card: #1A1A1A !important;
+  --text: #FFFFFF !important;
+  --text-muted: rgba(255,255,255,0.6) !important;
+  --text-dim: rgba(255,255,255,0.4) !important;
+  --border: rgba(255,255,255,0.10) !important;
+  --border-strong: rgba(255,255,255,0.20) !important;
+  --gold: #C9A84C !important;
+  --gold-bright: #E6C76A !important;
+  --gold-dim: rgba(201,168,76,0.25) !important;
+  --input-bg: #1A1A1A !important;
+  --scrollbar-track: #0A0A0A !important;
+  --scrollbar-thumb: #C9A84C !important;
+  --toast-bg: #1A1A1A !important;
+  --toast-border: rgba(201,168,76,0.3) !important;
+  --overlay: rgba(0,0,0,0.85) !important;
+  --shadow: 0 4px 24px rgba(0,0,0,0.4) !important;
 }
 
 .font-display { font-family: 'Oswald', 'Impact', sans-serif; letter-spacing: 0.02em; }
 .font-script { font-family: 'Pinyon Script', 'Great Vibes', 'Parisienne', cursive; }
 
-/* ========== Custom scrollbar (desktop) ========== */
+/* ========== Custom scrollbar ========== */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: #0A0A0A; }
-::-webkit-scrollbar-thumb { background: #C9A84C; border-radius: 3px; }
+::-webkit-scrollbar-track { background: var(--scrollbar-track); }
+::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 3px; }
 @media (max-width: 767px) {
   ::-webkit-scrollbar { width: 3px; height: 3px; }
 }
 
 /* ========== Gold gradient text ========== */
 .gold-text {
-  background: linear-gradient(135deg, #E6C76A 0%, #C9A84C 50%, #A8893A 100%);
+  background: linear-gradient(135deg, var(--gold-bright) 0%, var(--gold) 50%, var(--gold) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -55,37 +145,107 @@ body {
 
 /* ========== Buttons ========== */
 .btn-gold {
-  @apply bg-gold text-dark font-semibold px-6 py-3 uppercase tracking-wider text-sm transition-all duration-300 hover:bg-[#E6C76A] hover:shadow-[0_0_30px_rgba(201,168,76,0.5)] active:scale-95;
-  min-height: 44px; /* iOS recommended minimum touch target */
+  background: linear-gradient(180deg, var(--gold-bright) 0%, var(--gold) 100%);
+  color: #0A0A0A;
+  font-weight: 600;
+  padding: 0.75rem 1.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.85rem;
+  transition: all 0.3s ease;
+  min-height: 44px;
   white-space: nowrap;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  border: none;
+  box-shadow: 0 2px 8px var(--gold-dim);
 }
+.btn-gold:hover {
+  filter: brightness(1.08);
+  box-shadow: 0 0 28px var(--gold-dim);
+  transform: translateY(-1px);
+}
+.btn-gold:active { transform: scale(0.97); }
+.btn-gold:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
 .btn-outline {
-  @apply border-2 border-white/80 text-white font-semibold px-6 py-3 uppercase tracking-wider text-sm transition-all duration-300 hover:border-gold hover:text-gold active:scale-95;
+  border: 2px solid var(--border-strong);
+  color: var(--text);
+  background: transparent;
+  font-weight: 600;
+  padding: 0.75rem 1.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.85rem;
+  transition: all 0.3s ease;
   min-height: 44px;
   white-space: nowrap;
   display: inline-flex;
   align-items: center;
   justify-content: center;
 }
+.btn-outline:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+.btn-outline:active { transform: scale(0.97); }
+
 .btn-dark {
-  @apply bg-white/10 text-white border border-white/20 px-5 py-2.5 uppercase tracking-wider text-xs font-semibold transition-all duration-200 hover:bg-white/20 active:scale-95;
+  background: rgba(128,128,128,0.12);
+  color: var(--text);
+  border: 1px solid var(--border);
+  padding: 0.6rem 1.25rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.75rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
   min-height: 40px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
 }
+.btn-dark:hover {
+  background: rgba(128,128,128,0.22);
+  border-color: var(--border-strong);
+}
+.btn-dark:active { transform: scale(0.97); }
 
-/* Mobile: slightly less padding on buttons */
 @media (max-width: 480px) {
-  .btn-gold, .btn-outline { @apply px-4 py-2.5 text-xs; }
+  .btn-gold, .btn-outline { padding: 0.65rem 1rem; font-size: 0.75rem; }
+}
+
+/* ========== Cards & surfaces ========== */
+.surface-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+}
+.surface-elevated {
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
 }
 
 /* ========== Modal backdrop ========== */
 .modal-backdrop {
-  @apply fixed inset-0 bg-black/90 z-50 flex items-start sm:items-center justify-center overflow-y-auto p-2 sm:p-4 backdrop-blur-sm animate-fade-in;
+  position: fixed;
+  inset: 0;
+  background: var(--overlay);
+  z-index: 50;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  overflow-y: auto;
+  padding: 0.5rem;
+  backdrop-filter: blur(6px);
+  animation: fade-in 0.2s ease-out;
+}
+@media (min-width: 640px) {
+  .modal-backdrop { align-items: center; padding: 1rem; }
+}
+.modal-backdrop {
   padding-top: max(1rem, env(safe-area-inset-top));
   padding-bottom: max(1rem, env(safe-area-inset-bottom));
   -webkit-overflow-scrolling: touch;
@@ -99,29 +259,23 @@ body {
   transition: all 0.5s;
   -webkit-tap-highlight-color: transparent;
 }
-.artist-card img {
-  transition: transform 0.7s;
-}
-@media (hover: hover) {
-  .artist-card:hover img { transform: scale(1.1); }
-}
+.artist-card img { transition: transform 0.7s; }
+@media (hover: hover) { .artist-card:hover img { transform: scale(1.1); } }
 .artist-card:active { transform: scale(0.98); }
 .artist-card .overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(to top, black, rgba(0,0,0,0.4), transparent);
+  background: linear-gradient(to top, rgba(0,0,0,0.9), rgba(0,0,0,0.4), transparent);
   opacity: 0.85;
   transition: opacity 0.3s;
   pointer-events: none;
 }
-@media (hover: hover) {
-  .artist-card:hover .overlay { opacity: 1; }
-}
+@media (hover: hover) { .artist-card:hover .overlay { opacity: 1; } }
 .artist-card .gifts-btn {
   position: absolute;
   bottom: 0.75rem;
   right: 0.75rem;
-  background: #C9A84C;
+  background: var(--gold);
   color: #0A0A0A;
   font-weight: 700;
   padding: 0.5rem 0.75rem;
@@ -133,18 +287,10 @@ body {
   min-height: 36px;
 }
 @media (min-width: 768px) and (hover: hover) {
-  .artist-card .gifts-btn {
-    display: block;
-    opacity: 0;
-    transform: translateY(0.5rem);
-  }
-  .artist-card:hover .gifts-btn {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  .artist-card .gifts-btn { display: block; opacity: 0; transform: translateY(0.5rem); }
+  .artist-card:hover .gifts-btn { opacity: 1; transform: translateY(0); }
 }
 
-/* Fix artist card name overflow */
 .artist-card .artist-name,
 .artist-card .overlay h3 {
   word-break: break-word;
@@ -161,33 +307,54 @@ body {
   max-width: 100%;
 }
 
-/* ========== Inputs ========== */
+/* ========== Inputs (theme-aware) ========== */
 .form-input {
-  @apply w-full bg-dark-card border border-white/10 rounded-none px-4 py-3 text-white placeholder-white/40 focus:border-gold focus:outline-none transition-colors text-sm;
+  width: 100%;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  padding: 0.75rem 1rem;
+  color: var(--text);
+  transition: border-color 0.2s ease, background 0.2s ease;
+  font-size: 0.875rem;
   min-height: 44px;
   -webkit-appearance: none;
   appearance: none;
   border-radius: 0;
 }
+.form-input::placeholder { color: var(--text-dim); }
+.form-input:focus {
+  outline: none;
+  border-color: var(--gold);
+  box-shadow: 0 0 0 2px var(--gold-dim);
+}
 textarea.form-input { min-height: auto; }
-/* Select arrow on dark bg */
+html.light .form-input, html[data-theme="light"] .form-input {
+  border-radius: 4px;
+}
+/* Select arrow — colored for theme */
 select.form-input {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23C9A84C' d='M6 8L0 0h12z'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 12px center;
   padding-right: 2.25rem;
 }
+html.light select.form-input, html[data-theme="light"] select.form-input {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%238A7530' d='M6 8L0 0h12z'/%3E%3C/svg%3E");
+}
 
-/* ========== Range / slider (seek bars) ========== */
+/* Light-mode tweaks to input/checkbox */
+html.light input[type="checkbox"], html[data-theme="light"] input[type="checkbox"] { accent-color: #8A7530; }
+
+/* ========== Range / slider ========== */
 input[type="range"] {
   -webkit-appearance: none;
   appearance: none;
   height: 4px;
-  background: rgba(255,255,255,0.2);
+  background: var(--border-strong);
   border-radius: 2px;
   outline: none;
-  min-height: 24px; /* bigger touch target area */
-  padding: 10px 0; /* extend the tap target */
+  min-height: 24px;
+  padding: 10px 0;
   background-clip: content-box;
 }
 input[type="range"]::-webkit-slider-thumb {
@@ -195,40 +362,45 @@ input[type="range"]::-webkit-slider-thumb {
   appearance: none;
   width: 16px;
   height: 16px;
-  background: #C9A84C;
+  background: var(--gold);
   border-radius: 50%;
   cursor: pointer;
-  border: 2px solid #1A1A1A;
-  box-shadow: 0 0 6px rgba(201,168,76,0.6);
+  border: 2px solid var(--bg-elev);
+  box-shadow: 0 0 6px var(--gold-dim);
 }
 input[type="range"]::-moz-range-thumb {
   width: 16px;
   height: 16px;
-  background: #C9A84C;
+  background: var(--gold);
   border-radius: 50%;
   cursor: pointer;
-  border: 2px solid #1A1A1A;
-  box-shadow: 0 0 6px rgba(201,168,76,0.6);
+  border: 2px solid var(--bg-elev);
+  box-shadow: 0 0 6px var(--gold-dim);
 }
 
-/* ========== Audio player (native) ========== */
-audio {
-  width: 100%;
-  max-width: 100%;
-}
-audio::-webkit-media-controls-panel { background: #1A1A1A; }
-/* Make native audio controls fit mobile */
-audio::-webkit-media-controls-enclosure {
-  max-width: 100%;
-  border-radius: 0;
-}
+/* ========== Audio player ========== */
+audio { width: 100%; max-width: 100%; }
+audio::-webkit-media-controls-panel { background: var(--bg-card); }
+audio::-webkit-media-controls-enclosure { max-width: 100%; border-radius: 0; }
 
-/* ========== Tables — mobile friendly ========== */
+/* ========== Tables (theme-aware, mobile friendly) ========== */
+table { border-collapse: collapse; width: 100%; }
+table th {
+  text-align: left;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+  font-size: 0.7rem;
+}
+table td, table th { padding: 0.75rem 1rem; border-bottom: 1px solid var(--border); }
+html.light table th, html[data-theme="light"] table th { font-size: 0.68rem; letter-spacing: 0.1em; }
 @media (max-width: 640px) {
-  table th, table td {
-    @apply px-2 py-2 text-xs;
-  }
+  table th, table td { padding: 0.65rem 0.5rem; }
 }
+
+/* Tr hover highlight in both modes */
+table tbody tr:hover { background: var(--gold-dim); }
 
 /* ========== Mobile safe area ========== */
 @supports (padding: max(0px)) {
@@ -237,118 +409,138 @@ audio::-webkit-media-controls-enclosure {
   .safe-pt { padding-top: max(0px, env(safe-area-inset-top)); }
 }
 
-/* Prevent iOS fixed-position bug when keyboard opens */
-@supports (height: 100dvh) {
-  .min-h-screen { min-height: 100dvh; }
-}
+@supports (height: 100dvh) { .min-h-screen { min-height: 100dvh; } }
 
-/* ========== Details/Summary (FAQ) — remove default marker on iOS ========== */
+/* ========== Details/Summary ========== */
 summary::-webkit-details-marker { display: none; }
 summary { list-style: none; }
 
-/* ========== Toaster mobile fixes ========== */
-[data-sonner-toaster], .react-hot-toast-container {
-  bottom: max(1rem, env(safe-area-inset-bottom)) !important;
-  top: auto !important;
-  padding: 0 1rem !important;
+/* ========== Toaster theme overrides ========== */
+.react-hot-toast-container > div > div {
+  background: var(--toast-bg) !important;
+  border: 1px solid var(--toast-border) !important;
+  color: #fff !important;
 }
 
-/* ========== Iframes responsive (YouTube/TikTok) ========== */
+/* ========== Iframes responsive ========== */
 .video-embed-container {
-  position: relative;
-  width: 100%;
-  padding-bottom: 56.25%;
-  height: 0;
-  overflow: hidden;
+  position: relative; width: 100%; padding-bottom: 56.25%; height: 0; overflow: hidden;
 }
 .video-embed-container iframe {
-  position: absolute;
-  top: 0; left: 0;
-  width: 100%;
-  height: 100%;
-  border: 0;
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0;
 }
 
-/* ========== Hide scrollbar on chip rows (mobile filter tabs) ========== */
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-/* ========== Prevent long emails/URLs from breaking mobile layouts ========== */
-.break-anywhere {
-  overflow-wrap: anywhere;
-  word-break: break-word;
-}
+.break-anywhere { overflow-wrap: anywhere; word-break: break-word; }
 
-/* ========== Music equalizer animation (TrackRow "now playing" bars) ========== */
-@keyframes eq {
-  0%, 100% { height: 30%; }
-  50% { height: 100%; }
-}
+/* ========== Music equalizer ========== */
+@keyframes eq { 0%,100%{height:30%} 50%{height:100%} }
 
-/* ========== Hero (new split-layout) ========== */
+/* ========== Hero buttons ========== */
 .btn-hero-gold {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  display: inline-flex; align-items: center; justify-content: center;
   background: linear-gradient(180deg, #8A7530 0%, #5C4B1F 100%);
-  color: #fff;
-  font-family: 'Oswald', 'Impact', sans-serif;
-  font-weight: 500;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  padding: 0.9rem 1.75rem;
-  min-width: 260px;
-  border-radius: 10px;
-  font-size: 1rem;
-  transition: all 0.3s ease;
-  white-space: nowrap;
-  border: none;
+  color: #fff; font-family: 'Oswald','Impact',sans-serif; font-weight: 500;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  padding: 0.9rem 1.75rem; min-width: 260px; border-radius: 10px;
+  font-size: 1rem; transition: all 0.3s ease; white-space: nowrap; border: none;
 }
-.btn-hero-gold:hover { filter: brightness(1.15); box-shadow: 0 8px 28px rgba(90, 74, 34, 0.45); }
-
+.btn-hero-gold:hover { filter: brightness(1.15); box-shadow: 0 8px 28px rgba(90,74,34,0.45); }
 .btn-hero-dark {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  display: inline-flex; align-items: center; justify-content: center;
   background: linear-gradient(180deg, #242424 0%, #0A0A0A 100%);
-  color: #fff;
-  font-family: 'Oswald', 'Impact', sans-serif;
-  font-weight: 500;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  padding: 0.9rem 1.75rem;
-  min-width: 260px;
-  border-radius: 10px;
-  font-size: 1rem;
-  transition: all 0.3s ease;
-  white-space: nowrap;
-  border: none;
+  color: #fff; font-family: 'Oswald','Impact',sans-serif; font-weight: 500;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  padding: 0.9rem 1.75rem; min-width: 260px; border-radius: 10px;
+  font-size: 1rem; transition: all 0.3s ease; white-space: nowrap; border: none;
 }
 .btn-hero-dark:hover { filter: brightness(1.3); }
-
 @media (max-width: 1023px) {
   .btn-hero-gold, .btn-hero-dark {
-    width: 100%;
-    min-width: 0;
-    padding: 0.9rem 1.25rem;
-    font-size: 1rem;
-    letter-spacing: 0.1em;
-    min-height: 52px;
+    width: 100%; min-width: 0; padding: 0.9rem 1.25rem;
+    font-size: 1rem; letter-spacing: 0.1em; min-height: 52px;
   }
+}
+/* Light-mode hero variants */
+html.light .btn-hero-dark, html[data-theme="light"] .btn-hero-dark {
+  background: linear-gradient(180deg, #2b2b2b 0%, #0A0A0A 100%);
 }
 
 .video-placeholder {
-  border: 2px dashed rgba(0,0,0,0.35);
-  background: rgba(255,255,255,0.06);
-  color: rgba(0,0,0,0.65);
-  font-family: 'Inter', sans-serif;
+  border: 2px dashed rgba(0,0,0,0.2);
+  background: rgba(0,0,0,0.03);
+  color: rgba(0,0,0,0.55);
+  font-family: 'Inter',sans-serif;
   font-size: 0.95rem;
   letter-spacing: 0.02em;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  padding: 1rem;
-  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center; text-align: center;
+  padding: 1rem; border-radius: 6px;
+}
+html.light .video-placeholder, html[data-theme="light"] .video-placeholder { color: rgba(60,50,20,0.5); }
+
+/* ========== Admin dashboard polish ========== */
+.admin-shell {
+  background: var(--bg);
+  color: var(--text);
+}
+.admin-stat-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  padding: 1.25rem 1.5rem;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.3s ease, transform 0.2s ease;
+}
+.admin-stat-card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; width: 3px; height: 100%;
+  background: linear-gradient(180deg, var(--gold-bright) 0%, var(--gold) 100%);
+}
+.admin-stat-card:hover {
+  border-color: var(--gold-dim);
+  transform: translateY(-2px);
+}
+.admin-tab-btn {
+  position: relative;
+  color: var(--text-muted);
+  transition: color 0.2s ease;
+  border-bottom: 2px solid transparent;
+}
+.admin-tab-btn:hover { color: var(--text); }
+.admin-tab-btn.active {
+  color: var(--gold);
+  border-bottom-color: var(--gold);
 }
 
+/* Admin mobile tweaks */
+.admin-mobile { word-break: break-word; }
+.admin-mobile table { border-collapse: separate; border-spacing: 0; }
+.admin-mobile td, .admin-mobile th { word-break: normal; }
+.admin-mobile input[type="file"] { max-width: 100%; }
+@media (max-width: 639px) {
+  .admin-mobile table th,
+  .admin-mobile table td { padding: 8px 6px !important; }
+  .admin-mobile table th { font-size: 9px !important; letter-spacing: 0.06em !important; }
+  .admin-mobile table td { font-size: 11px !important; }
+  .admin-mobile table td .text-sm { font-size: 12px !important; }
+  .admin-mobile table td .text-xs { font-size: 10px !important; }
+  .admin-mobile .form-input { font-size: 16px !important; padding: 10px 12px !important; }
+  .admin-mobile h1 { word-break: break-word; font-size: 1.5rem !important; }
+  .admin-mobile h3 { font-size: 1rem !important; }
+  .admin-mobile .btn-gold,
+  .admin-mobile .btn-dark { min-height: 40px; font-size: 11px !important; }
+  .admin-mobile img.avatar-sm { width: 36px !important; height: 36px !important; }
+  .admin-mobile textarea.form-input { font-size: 14px !important; }
+  .admin-mobile select.form-input { font-size: 14px !important; }
+  .admin-mobile label { font-size: 12px !important; }
+  .admin-mobile .space-y-4 > * + * { margin-top: 0.85rem !important; }
+  .admin-mobile audio, .admin-mobile video, .admin-mobile img { max-width: 100% !important; }
+  .admin-mobile .max-h-\[600px\] { max-height: 360px !important; }
+  .admin-stat-card { padding: 0.9rem 1rem !important; }
+  .admin-stat-card::before { width: 2px; }
+}
+
+/* Selection color */
+::selection { background: var(--gold); color: #0A0A0A; }

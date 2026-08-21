@@ -85,7 +85,7 @@ export default function MusicPage() {
   }
 
   return (
-    <div className="min-h-screen bg-dark pb-20">
+    <div className="min-h-screen bg-dark pb-20 cinematic-dark">
       {/* ======= BROWSE ALL ALBUMS ======= */}
       {!activeAlbum && (
         <div className="pt-20 md:pt-28 pb-6 px-3 sm:px-6 max-w-7xl mx-auto">

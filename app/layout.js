@@ -5,6 +5,7 @@ import Footer from '@/components/Footer'
 import Providers from '@/components/Providers'
 import SetupBanner from '@/components/SetupBanner'
 import CustomCursor from '@/components/CustomCursor'
+import { ThemeProvider, themeInitScript } from '@/components/ThemeProvider'
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
 
@@ -29,18 +30,24 @@ export const viewport = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" className="h-full">
+    <html lang="en" className="h-full dark" suppressHydrationWarning>
+      <head>
+        {/* Runs BEFORE React hydrates — prevents flash of wrong theme */}
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+      </head>
       <body
-        className={`${inter.className} bg-dark text-white flex flex-col`}
-        style={{ minHeight: '100dvh' }}
+        className={`${inter.className} flex flex-col`}
+        style={{ minHeight: '100dvh', backgroundColor: 'var(--bg)', color: 'var(--text)' }}
       >
-        <Providers>
-          <Navbar />
-          <SetupBanner />
-          <main className="flex-1 flex flex-col safe-bottom">{children}</main>
-          <Footer />
-          <CustomCursor />
-        </Providers>
+        <ThemeProvider>
+          <Providers>
+            <Navbar />
+            <SetupBanner />
+            <main className="flex-1 flex flex-col safe-bottom">{children}</main>
+            <Footer />
+            <CustomCursor />
+          </Providers>
+        </ThemeProvider>
       </body>
     </html>
   )

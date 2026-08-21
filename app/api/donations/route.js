@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions, isOwnerEmail, SUPER_ADMIN, resolveAdminRecord, norm, mergePerms } from '@/lib/auth'
 import dbConnect from '@/lib/dbConnect'
+import { isDbDownError } from '@/lib/dbSafe'
 import Donation from '@/models/Donation'
 
 export const dynamic = 'force-dynamic'
@@ -80,11 +81,18 @@ export async function GET(req) {
       headers: { 'x-user-role': isSuper ? 'super' : 'admin' },
     })
   } catch (e) {
+    if (isDbDownError(e)) {
+      console.warn('[donations GET] DB down:', e.message.slice(0, 120))
+      return NextResponse.json(
+        { error: 'Database temporarily unavailable', dbDown: true, donations: [], pagination: emptyPagination() },
+        { status: 503, headers: { 'x-db-down': '1' } }
+      )
+    }
     console.error('[donations GET] error:', e)
     return NextResponse.json({ error: e.message, donations: [], pagination: emptyPagination() }, { status: 500 })
   }
 }
 
-function emptyPagination() {
-  return { page: 1, limit: 10, total: 0, totalPages: 1, hasMore: false }
+function emptyPagination(page = 1, limit = 10) {
+  return { page, limit, total: 0, totalPages: 1, hasMore: false }
 }

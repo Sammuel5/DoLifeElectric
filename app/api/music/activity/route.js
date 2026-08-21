@@ -1,18 +1,17 @@
 import { NextResponse } from 'next/server'
 import { requireSuperAdmin } from '@/lib/auth'
 import dbConnect from '@/lib/dbConnect'
+import { isDbDownError } from '@/lib/dbSafe'
 import TrackActivity from '@/models/TrackActivity'
 import 'server-only'
 
 export const dynamic = 'force-dynamic'
 
+function emptyPagination(page = 1, limit = 10) {
+  return { page, limit, total: 0, totalPages: 1, hasMore: false }
+}
+
 // GET /api/music/activity — list track activity (paginated)
-// Query params:
-//   page:     1-based page number (default 1)
-//   limit:    items per page (default 10, max 100)
-//   type:     play | download | all (default all)
-//   search:   search by user name / email / track title / artist name (optional)
-// Returns:  { activities: [], pagination: { page, limit, total, totalPages, hasMore } }
 export async function GET(req) {
   try {
     const auth = await requireSuperAdmin()
@@ -22,7 +21,7 @@ export async function GET(req) {
     const { searchParams } = new URL(req.url)
     const page = Math.max(1, parseInt(searchParams.get('page') || '1'))
     const limit = Math.min(Math.max(1, parseInt(searchParams.get('limit') || '10')), 100)
-    const type = searchParams.get('type') || 'all' // play | download | all
+    const type = searchParams.get('type') || 'all'
     const search = (searchParams.get('search') || '').trim()
 
     const query = {}
@@ -52,6 +51,18 @@ export async function GET(req) {
       pagination: { page, limit, total, totalPages, hasMore: page < totalPages },
     })
   } catch (e) {
+    if (isDbDownError(e)) {
+      console.warn('[music/activity GET] DB down:', e.message.slice(0, 120))
+      const { searchParams } = new URL(req.url)
+      const page = Math.max(1, parseInt(searchParams.get('page') || '1'))
+      const limit = Math.min(Math.max(1, parseInt(searchParams.get('limit') || '10')), 100)
+      return NextResponse.json({
+        error: 'Database temporarily unavailable',
+        dbDown: true,
+        activities: [],
+        pagination: emptyPagination(page, limit),
+      }, { status: 503, headers: { 'x-db-down': '1' } })
+    }
     return NextResponse.json({
       error: e.message,
       activities: [],

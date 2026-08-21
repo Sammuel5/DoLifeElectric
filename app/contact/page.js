@@ -50,7 +50,7 @@ export default function ContactPage() {
 
   return (
     <div
-      className="relative w-full overflow-hidden"
+      className="relative w-full overflow-hidden cinematic-dark"
       style={{
         minHeight: 'calc(100dvh - var(--nav-h))',
         background:

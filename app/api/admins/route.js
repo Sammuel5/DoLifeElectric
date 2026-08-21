@@ -1,8 +1,12 @@
 import { NextResponse } from 'next/server'
 import { requireSuperAdmin } from '@/lib/auth'
-import dbConnect from '@/lib/dbConnect'
+import dbConnect, { DbUnavailableError } from '@/lib/dbConnect'
+import { isDbDownError } from '@/lib/dbSafe'
 import Admin from '@/models/Admin'
 export const dynamic = 'force-dynamic'
+
+const DB_DOWN_HEADERS = { 'x-db-down': '1' }
+const emptyAdminList = () => NextResponse.json([], { status: 503, headers: DB_DOWN_HEADERS })
 
 export async function GET() {
   try {
@@ -24,6 +28,10 @@ export async function GET() {
       createdAt: a.createdAt,
     })))
   } catch (e) {
+    if (isDbDownError(e)) {
+      console.warn('[admins GET] DB down:', e.message.slice(0, 120))
+      return NextResponse.json({ error: 'Database unavailable', dbDown: true }, { status: 503, headers: DB_DOWN_HEADERS })
+    }
     return NextResponse.json({ error: e.message }, { status: 500 })
   }
 }
@@ -52,7 +60,7 @@ export async function POST(req) {
       addedBy: auth.session.user.email,
       permissions: {
         music:     !!body.permissions?.music,
-        artists:   body.permissions?.artists !== false, // default true
+        artists:   body.permissions?.artists !== false,
         donations: !!body.permissions?.donations,
       },
     })
@@ -67,6 +75,12 @@ export async function POST(req) {
       createdAt: admin.createdAt,
     })
   } catch (e) {
+    if (isDbDownError(e)) {
+      return NextResponse.json(
+        { error: 'Database is currently unreachable. Wait a moment and try again, or run `node test-db.js` to diagnose.', dbDown: true },
+        { status: 503, headers: DB_DOWN_HEADERS }
+      )
+    }
     return NextResponse.json({ error: e.message }, { status: 500 })
   }
 }

@@ -142,7 +142,7 @@ export default function ArtistsPage() {
 
   return (
     <div
-      className="relative w-full overflow-hidden py-12 md:py-20 px-0"
+      className="relative w-full overflow-hidden py-12 md:py-20 px-0 cinematic-dark"
       style={{
         background: 'radial-gradient(ellipse at 50% 0%, rgba(201,168,76,0.10) 0%, rgba(0,0,0,0) 45%), #0A0806',
       }}

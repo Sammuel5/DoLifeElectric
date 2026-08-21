@@ -30,7 +30,7 @@ export default function AboutPage() {
 
   return (
     <div
-      className="relative w-full bg-black text-white overflow-x-hidden cinematic-dark"
+      className="relative w-full bg-black text-white overflow-x-hidden"
       style={{ fontFamily: '"Montserrat","Inter",sans-serif' }}
     >
       <style jsx global>{`
@@ -38,41 +38,6 @@ export default function AboutPage() {
           .s2-honeycomb {
             background-size: 130% auto !important;
             background-position: center 25% !important;
-          }
-          .s4-stats { grid-template-columns: 1fr 1fr 1fr !important; }
-        }
-        /* Pull X-Bound group up OVER Section 3 on ALL sizes so the characters overlap.
-           Scaled: milder on phones, stronger on tablets, strongest on desktop. */
-        @media (min-width: 480px) {
-          .s4-xbound-wrap { margin-top: -320px !important; }
-          .s4-headline { margin-top: -220px !important; }
-        }
-        @media (min-width: 768px) {
-          .s4-xbound-wrap { margin-top: -480px !important; }
-          .s4-headline { margin-top: -320px !important; }
-        }
-        @media (min-width: 1024px) {
-          .s4-xbound-wrap { margin-top: -640px !important; }
-          .s4-headline { margin-top: -420px !important; }
-        }
-        @media (min-width: 1440px) {
-          .s4-xbound-wrap { margin-top: -720px !important; }
-          .s4-headline { margin-top: -480px !important; }
-        }
-        /* Mobile hero: natural height so there's no empty black gap below tagline.
-           Desktop (md+): keep the full-viewport cinematic hero. */
-        .hero-sec { min-height: auto !important; }
-        .hero-inner {
-          min-height: auto !important;
-          padding-top: clamp(60px, 16vh, 110px) !important;
-          padding-bottom: clamp(50px, 12vh, 100px) !important;
-        }
-        @media (min-width: 768px) {
-          .hero-sec { min-height: calc(100dvh - var(--nav-h)) !important; }
-          .hero-inner {
-            min-height: calc(100dvh - var(--nav-h)) !important;
-            padding-top: 0 !important;
-            padding-bottom: 0 !important;
           }
         }
       `}</style>
@@ -82,8 +47,8 @@ export default function AboutPage() {
           Desktop: everything centered & larger.
           ============================================================ */}
       <section
-        className="relative w-full overflow-hidden hero-sec"
-        style={{ zIndex: 1 }}
+        className="relative w-full overflow-hidden"
+        style={{ minHeight: 'calc(100dvh - var(--nav-h))', zIndex: 1 }}
       >
         <img
           src={ASSET.hero}
@@ -111,7 +76,7 @@ export default function AboutPage() {
           }}
         />
 
-        <div className="relative z-10 flex flex-col items-center justify-center text-center px-5 sm:px-4 w-full h-full hero-inner">
+        <div className="relative z-10 flex flex-col items-center justify-center text-center px-5 sm:px-4 w-full h-full min-h-[calc(100dvh-var(--nav-h))]">
           {/* About + DLE lockup */}
           <div
             className="relative flex items-end justify-center select-none"
@@ -221,8 +186,8 @@ export default function AboutPage() {
         <div
           className="absolute bottom-0 left-0 right-0 pointer-events-none"
           style={{
-            height: 'clamp(90px, 18%, 220px)',
-            background: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.5) 35%, rgba(0,0,0,0.92) 70%, #000 100%)',
+            height: 'clamp(150px, 26%, 320px)',
+            background: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.5) 30%, rgba(0,0,0,0.9) 60%, #000 100%)',
           }}
         />
       </section>
@@ -370,13 +335,13 @@ export default function AboutPage() {
           SEAMLESS from Section 2:
             - Same #000 black base (no color shift at the seam)
             - Bridge headline uses IDENTICAL size/weight/font/leading as S2's
-              "IS AN ELITE ENTERTAINMENT COMPANY" line so the sentence
+              ".IS AN ELITE ENTERTAINMENT COMPANY" line so the sentence
               reads as one continuous thought with no visual break.
             - Artists pulled up so they appear directly beneath the text,
               fully visible (heads + hands + bodies all in frame).
           ============================================================ */}
       <section
-        className="relative w-full overflow-visible"
+        className="relative w-full overflow-hidden"
         style={{
           paddingTop: '0px',
           paddingBottom: '0px',
@@ -384,7 +349,6 @@ export default function AboutPage() {
           background:
             'radial-gradient(ellipse at 50% 55%, rgba(140,100,28,0.22) 0%, rgba(60,45,15,0.10) 30%, rgba(0,0,0,0) 65%),' +
             '#000',
-          zIndex: 4,
         }}
       >
         {/* MOBILE LAYOUT (<md):
@@ -404,9 +368,9 @@ export default function AboutPage() {
               marginBottom: 'clamp(14px,3vw,22px)',
             }}
           >
-            IS AN ELITE ENTERTAINMENT COMPANY
+            .IS AN ELITE ENTERTAINMENT COMPANY
             <br />
-            PROVIDING PLATFORM FOR ARTISTS
+            PROVIDING INFRASTRUCTURE FOR ARTISTS
             <br />
             WHO CHOOSE TO LIGHT UP THE WORLD.
           </p>
@@ -418,7 +382,7 @@ export default function AboutPage() {
               alt="Anghel"
               className="absolute pointer-events-none"
               style={{
-                left: '6%',
+                left: '-6%',
                 bottom: 0,
                 height: '100%',
                 width: 'auto',
@@ -434,7 +398,7 @@ export default function AboutPage() {
               style={{
                 position: 'absolute',
                 right: '10px',
-                top: '30%',
+                top: '10%',
                 width: '56%',
                 fontFamily: '"Montserrat","Inter",sans-serif',
                 fontSize: 'clamp(10px, 2.7vw, 13px)',
@@ -443,7 +407,7 @@ export default function AboutPage() {
                 zIndex: 10,
               }}
             >
-              Gifting platform allows supporter worldwide to send appreciation such as accessories, clothing, and even direct financial rewards to their favorite artists.
+              Our fan support platform allows supporters worldwide to send gifts, food, clothing, and direct financial support to their favorite artists — securely, transparently, and with 100% of funds routed through DLE&rsquo;s official PayMongo accounts before being distributed to artists according to their contracts.
             </p>
           </div>
 
@@ -454,7 +418,7 @@ export default function AboutPage() {
               alt="Storm"
               className="absolute pointer-events-none"
               style={{
-                right: '6%',
+                right: '-6%',
                 bottom: 0,
                 height: '100%',
                 width: 'auto',
@@ -519,9 +483,9 @@ export default function AboutPage() {
                 zIndex: 10,
               }}
             >
-               IS AN ELITE ENTERTAINMENT COMPANY
+              .IS AN ELITE ENTERTAINMENT COMPANY
               <br className="hidden sm:block" />
-              PROVIDING PLATFORM FOR ARTISTS
+              PROVIDING INFRASTRUCTURE FOR ARTISTS
               <br className="hidden lg:block" />
               WHO CHOOSE TO LIGHT UP THE WORLD.
             </p>
@@ -531,8 +495,8 @@ export default function AboutPage() {
               className="relative w-full grid"
               style={{
                 gridTemplateColumns: '1fr 1fr',
-                height: 'clamp(340px, 40vw, 500px)',
-                marginTop: 'clamp(-50px,-4vw,-30px)',
+                height: 'clamp(460px, 54vw, 660px)',
+                marginTop: 'clamp(-30px,-2vw,-10px)',
               }}
             >
               {/* ===== LEFT COLUMN (Anghel + fan-support text) ===== */}
@@ -570,9 +534,13 @@ export default function AboutPage() {
                     zIndex: 10,
                   }}
                 >
-                  Gifting platform allows supporter worldwide
-                  <br />to send appreciation such as accessories, clothing, and
-                  <br />even direct financial rewards to their favorite artists.
+                  Our fan support platform allows supporters
+                  <br />worldwide to send gifts, food, clothing, and
+                  <br />direct financial support to their favorite artists
+                  <br />— securely, transparently, and with 100% of
+                  <br />funds routed through DLE&rsquo;s official PayMongo
+                  <br />accounts before being distributed to artists
+                  <br />according to their contracts.
                 </p>
               </div>
 
@@ -623,180 +591,17 @@ export default function AboutPage() {
           </div>
         </div>
 
-      </section>
-
-      {/* ============================================================
-          SECTION 4 — X-BOUND / STATS / CTA
-          Seamless from Section 3 (both start on #000, shared warm glow).
-          - X-Bound group photo centered, warm gold radial behind
-          - Headline: EVERY PLAY. EVERY DOWNLOAD. / EVERY GIFT. EVERY SHOW.
-          - Subhead: WE TURN VOLTAGE INTO VELOCITY FOR THE ARTISTS WHO CARRY THE CURRENT.
-          - 3 stat cards (100% / 24/7 / Global)
-          - EXPLORE THE ROSTER gold CTA
-          - Mobile: stacked, stats 1-col, CTA full-width
-          ============================================================ */}
-      <section
-        className="relative w-full overflow-visible"
-        style={{
-          paddingTop: '0px',
-          paddingBottom: 'clamp(60px, 10vw, 120px)',
-          marginTop: '-2px',
-          // Top 40% transparent (so S3 shows through during overlap), then solid black below
-          background:
-            'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0) 25%, rgba(0,0,0,0.85) 50%, #000 70%)',
-          zIndex: 10,
-        }}
-      >
-        {/* X-Bound group portrait — FULL VIEWPORT WIDTH (no side cuts),
-            pulled UP into Section 3 to eliminate the black gap.
-            Top of the PNG is faded to transparent over a shorter band so the
-            brown studio bg blends into S4's pure black (#000) for seamless S3→S4.
-            Bottom faded for headline ledge. */}
+                        {/* Bottom fade into Section 4 */}
         <div
-          className="relative w-full flex justify-center s4-xbound-wrap"
+          className="absolute bottom-0 left-0 right-0 pointer-events-none"
           style={{
-            // Mobile: mild pull-up so heads don't get cut.
-            // Desktop: .s4-xbound-wrap media query pulls much higher.
-            marginTop: 'clamp(-160px,-22vw,-420px)',
-            // Bleed outside viewport on mobile too
-            marginLeft: 'calc(50% - 50vw)',
-            marginRight: 'calc(50% - 50vw)',
-            width: '100vw',
-            maxWidth: 'none',
-            overflow: 'hidden',
-            zIndex: 6,
+            height: 'clamp(40px, 5vw, 70px)',
+            background: 'linear-gradient(0deg, #000 0%, rgba(0,0,0,0.85) 50%, rgba(0,0,0,0) 100%)',
           }}
-        >
-          <img
-            src={ASSET.xbound}
-            alt="DLE X-Bound"
-            className="relative w-full"
-            style={{
-              // Full viewport width up to ultra-wide sizes
-              width: '100%',
-              maxWidth: '100%',
-              height: 'auto',
-              objectFit: 'cover',
-              objectPosition: 'center top',
-              // Shorter top fade: only the brown "ceiling" area of the PNG fades out,
-              // so the members' heads are fully visible closer to the top edge
-              // Top 0-4%: transparent (blends into S3 black).
-              // 4-10%: fast fade-in so faces are VISIBLE as they overlap S3.
-              // 10-70%: full opacity so bodies/clothes are sharp.
-              // Bottom: soft fade for headline ledge.
-              maskImage:
-                'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.55) 4%, rgba(0,0,0,0.95) 9%, rgba(0,0,0,1) 14%, rgba(0,0,0,1) 68%, rgba(0,0,0,0.85) 82%, rgba(0,0,0,0) 100%)',
-              WebkitMaskImage:
-                'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.55) 4%, rgba(0,0,0,0.95) 9%, rgba(0,0,0,1) 14%, rgba(0,0,0,1) 68%, rgba(0,0,0,0.85) 82%, rgba(0,0,0,0) 100%)',
-              filter: 'drop-shadow(0 30px 70px rgba(0,0,0,0.6)) saturate(0.98) contrast(1.02)',
-            }}
-          />
-        </div>
-
-        {/* Headline block */}
-        <div className="relative z-10 text-center px-5 sm:px-8 s4-headline" style={{ marginTop: 'clamp(-160px,-18vw,-320px)' }}>
-          <h2
-            className="font-display font-bold uppercase leading-[1.05] mx-auto"
-            style={{
-              fontSize: 'clamp(26px, 7.5vw, 82px)',
-              letterSpacing: '0.005em',
-              textShadow: '0 4px 24px rgba(0,0,0,0.85)',
-              maxWidth: '1100px',
-            }}
-          >
-            <span className="text-white">EVERY PLAY.</span>{' '}
-            <span className="text-[#FFD93D]">EVERY DOWNLOAD.</span>
-            <br />
-            <span className="text-[#FFD93D]">EVERY GIFT.</span>{' '}
-            <span className="text-white">EVERY SHOW.</span>
-          </h2>
-
-          <p
-            className="font-display font-bold uppercase text-white/90 leading-[1.15] mx-auto mt-4 sm:mt-5"
-            style={{
-              fontSize: 'clamp(13px, 3.2vw, 32px)',
-              letterSpacing: '0.01em',
-              maxWidth: '900px',
-              textShadow: '0 3px 18px rgba(0,0,0,0.85)',
-            }}
-          >
-            WE TURN VOLTAGE INTO VELOCITY FOR THE
-            <br />
-            ARTISTS WHO CARRY THE CURRENT.
-          </p>
-
-          {/* Gold divider */}
-          <div
-            className="mx-auto mt-6 sm:mt-8"
-            style={{
-              width: 'clamp(260px, 60vw, 760px)',
-              height: '2px',
-              background: 'linear-gradient(90deg, rgba(201,168,76,0) 0%, rgba(201,168,76,0.85) 50%, rgba(201,168,76,0) 100%)',
-              opacity: 0.7,
-            }}
-          />
-
-          {/* Stat cards — 1 col mobile, 3 cols sm+ */}
-          <div
-            className="s4-stats mx-auto mt-6 sm:mt-8 grid gap-3 sm:gap-4"
-            style={{
-              gridTemplateColumns: '1fr',
-              maxWidth: '820px',
-            }}
-          >
-            {[
-              { n: '100%', t: 'Secure payments via PayMongo, BSP-licensed' },
-              { n: '24/7', t: 'Artist support & fan engagement' },
-              { n: 'Global', t: 'Fan community from anywhere in the world' },
-            ].map((s) => (
-              <div
-                key={s.n}
-                className="text-left sm:text-center px-5 py-4 sm:py-5"
-                style={{
-                  background: 'linear-gradient(180deg, rgba(26,26,26,0.9) 0%, rgba(16,16,16,0.9) 100%)',
-                  border: '1px solid rgba(201,168,76,0.18)',
-                  boxShadow: '0 8px 24px rgba(0,0,0,0.5), inset 0 1px 0 rgba(201,168,76,0.08)',
-                }}
-              >
-                <div
-                  className="font-display font-bold gold-text leading-none"
-                  style={{ fontSize: 'clamp(28px, 5.5vw, 52px)' }}
-                >
-                  {s.n}
-                </div>
-                <div
-                  className="text-white/70 mt-2"
-                  style={{
-                    fontFamily: '"Montserrat","Inter",sans-serif',
-                    fontSize: 'clamp(10px, 1.8vw, 13px)',
-                    letterSpacing: '0.06em',
-                    lineHeight: 1.5,
-                  }}
-                >
-                  {s.t}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* EXPLORE THE ROSTER CTA */}
-          <div className="mt-7 sm:mt-9 flex justify-center">
-            <Link
-              href="/artists"
-              className="font-display uppercase tracking-[0.2em] bg-gold text-black px-7 sm:px-9 py-3 text-xs sm:text-sm font-bold hover:bg-[#E6C76A] transition-colors duration-300 inline-flex items-center gap-2"
-              style={{
-                borderRadius: 2,
-                minHeight: 44,
-                fontSize: 'clamp(10px, 1.8vw, 13px)',
-                boxShadow: '0 8px 24px rgba(201,168,76,0.18)',
-              }}
-            >
-              EXPLORE THE ROSTER
-              <span style={{ fontSize: '1.1em', marginLeft: '2px' }}>→</span>
-            </Link>
-          </div>
-        </div>
+        />
       </section>
+
+      {/* Section 4 will start directly below (S3 already fades to #000) */}
     </div>
   )
 }

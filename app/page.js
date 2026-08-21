@@ -191,7 +191,7 @@ function HomeContent() {
   })
 
   return (
-    <>
+    <div className="cinematic-dark">
       {/* ========================================== */}
       {/* HERO — full-bleed background video + overlays */}
       {/* ========================================== */}
@@ -856,7 +856,7 @@ function HomeContent() {
       </section>
 
       {selected && <VideoModal artist={selected} onClose={() => setSelected(null)} />}
-    </>
+    </div>
   )
 }
 

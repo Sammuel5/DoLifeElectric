@@ -187,7 +187,7 @@ export default function Navbar() {
       {/* Subtle texture */}
       <div aria-hidden
         className={`absolute inset-0 pointer-events-none ${isDark ? 'mix-blend-soft-light opacity-80' : 'mix-blend-multiply opacity-25'}`}
-        style={{ backgroundImage: "url('/header-texture.webp')", backgroundSize: 'cover', backgroundPosition: 'center' }} />
+        style={{ backgroundImage: "url('/header-texture.png')", backgroundSize: 'cover', backgroundPosition: 'center' }} />
       <div aria-hidden className="pointer-events-none absolute inset-0"
         style={{
           boxShadow: isDark
@@ -420,7 +420,7 @@ export default function Navbar() {
             }} />
           <div aria-hidden="true"
             className={`absolute inset-0 bg-cover bg-center pointer-events-none ${isDark ? 'opacity-30' : 'opacity-10 mix-blend-multiply'}`}
-            style={{ backgroundImage: "url('/dark-texture.webp')" }} />
+            style={{ backgroundImage: "url('/dark-texture.png')" }} />
 
           {/* Small DLE logo top */}
           <div className={`relative pt-8 pb-6 px-6 flex flex-col items-center border-b ${isDark ? 'border-gold/20' : 'border-[#E5DFD1]'}`}>

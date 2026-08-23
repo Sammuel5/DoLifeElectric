@@ -65,6 +65,7 @@ export function PlayerProvider({ children }) {
         trackId: track._id,
         trackTitle: track.title,
         artistName: track.artistName,
+        genreName: track.genreName || '',
         activityType: type,
       }),
     }).catch(() => {})

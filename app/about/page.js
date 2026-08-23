@@ -94,7 +94,7 @@ export default function AboutPage() {
             objectPosition: 'center 45%',
             filter: 'contrast(1.05) brightness(0.85)',
           }}
-        />
+         loading="lazy" decoding="async" />
         <div
           className="absolute inset-0 pointer-events-none"
           style={{
@@ -272,7 +272,7 @@ export default function AboutPage() {
               filter:
                 'drop-shadow(0 8px 24px rgba(0,0,0,0.85)) contrast(1.15) brightness(1.05) sepia(0.25) saturate(1.2) hue-rotate(-5deg)',
             }}
-          />
+           loading="lazy" decoding="async" />
         </div>
 
         <div className="relative z-10 flex flex-col items-center px-5 sm:px-4">
@@ -331,7 +331,7 @@ export default function AboutPage() {
                 objectFit: 'contain',
                 filter: 'drop-shadow(0 20px 50px rgba(0,0,0,0.7)) saturate(0.95)',
               }}
-            />
+             loading="lazy" decoding="async" />
           </div>
 
           {/* Text panel — ends on the company line; continuation bridges into S3 */}
@@ -428,7 +428,7 @@ export default function AboutPage() {
                 filter: 'drop-shadow(0 18px 35px rgba(0,0,0,0.7)) saturate(0.95)',
                 zIndex: 2,
               }}
-            />
+             loading="lazy" decoding="async" />
             <p
               className="text-white/80 leading-[1.65] text-left"
               style={{
@@ -464,7 +464,7 @@ export default function AboutPage() {
                 filter: 'drop-shadow(0 18px 35px rgba(0,0,0,0.7)) saturate(0.95)',
                 zIndex: 3,
               }}
-            />
+             loading="lazy" decoding="async" />
             <p
               className="text-white/80 leading-[1.65] text-right"
               style={{
@@ -552,7 +552,7 @@ export default function AboutPage() {
                     objectPosition: 'left bottom',
                     filter: 'drop-shadow(0 30px 70px rgba(0,0,0,0.8)) saturate(0.95)',
                   }}
-                />
+                 loading="lazy" decoding="async" />
                 {/* Fan-support paragraph — in left column, anchored to the RIGHT edge
                     of the column (so it sits beside Anghel's right shoulder), left-aligned */}
                 <p
@@ -593,7 +593,7 @@ export default function AboutPage() {
                     objectPosition: 'right bottom',
                     filter: 'drop-shadow(0 30px 70px rgba(0,0,0,0.8)) saturate(0.95)',
                   }}
-                />
+                 loading="lazy" decoding="async" />
                 {/* Platforms paragraph — in right column, anchored to the LEFT edge
                     of the column (so it sits beside Storm's left shoulder), right-aligned */}
                 <p
@@ -690,7 +690,7 @@ export default function AboutPage() {
                 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.55) 4%, rgba(0,0,0,0.95) 9%, rgba(0,0,0,1) 14%, rgba(0,0,0,1) 68%, rgba(0,0,0,0.85) 82%, rgba(0,0,0,0) 100%)',
               filter: 'drop-shadow(0 30px 70px rgba(0,0,0,0.6)) saturate(0.98) contrast(1.02)',
             }}
-          />
+           loading="lazy" decoding="async" />
         </div>
 
         {/* Headline block */}

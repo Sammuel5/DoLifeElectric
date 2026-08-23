@@ -4,10 +4,12 @@ import mongoose from 'mongoose'
 //       'admin' = granted admin (permissions controlled by flags below)
 //
 // permissions flags (only meaningfully checked for role='admin'; super always has everything):
-//   music     - can upload/edit/delete music tracks
-//   artists   - can add/edit/delete artists & groups (default true for all admins)
-//   donations - can VIEW gifts tab and download/export donation data
-//               (editing status/deleting gifts ALWAYS stays owner-only)
+//   music      - can upload/edit/delete music tracks
+//   artists    - can add/edit/delete artists & groups (default true for all admins)
+//   donations  - can VIEW gifts tab and download/export donation data
+//                (editing status/deleting gifts ALWAYS stays owner-only)
+//   analytics  - can VIEW Plays & Downloads tab and export listener analytics
+//                (deleting activity records ALWAYS stays owner-only)
 const AdminSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true, lowercase: true, trim: true },
   name: { type: String, default: '' },
@@ -17,12 +19,13 @@ const AdminSchema = new mongoose.Schema({
     music:     { type: Boolean, default: false },
     artists:   { type: Boolean, default: true },
     donations: { type: Boolean, default: false },
+    analytics: { type: Boolean, default: false },
   },
 }, { timestamps: true })
 
 AdminSchema.methods.can = function (perm) {
   if (this.role === 'super') return true
-  if (perm === 'artists' || perm === 'music' || perm === 'donations') return !!this.permissions?.[perm]
+  if (perm === 'artists' || perm === 'music' || perm === 'donations' || perm === 'analytics') return !!this.permissions?.[perm]
   return false
 }
 

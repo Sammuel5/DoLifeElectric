@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
+    "dev": "node with-dns.cjs dev",
+    "build": "node with-dns.cjs build",
+    "start": "node with-dns.cjs start",
     "lint": "next lint"
   },
   "dependencies": {
@@ -15,15 +15,15 @@
     "framer-motion": "^11.3.2",
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.408.0",
-    "mongodb": "^6.21.0",
     "mongoose": "^8.5.1",
     "next": "14.2.5",
     "next-auth": "^4.24.7",
-    "nodemailer": "^7.0.13",
+    "nodemailer": "^6.9.14",
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "react-hot-toast": "^2.4.1",
     "resend": "^6.18.0",
+    "server-only": "^0.0.1",
     "swr": "^2.2.5",
     "tailwind-merge": "^2.4.0"
   },
@@ -43,8 +43,5 @@
   },
   "engines": {
     "node": ">=18.17.0"
-  },
-  "allowScripts": {
-    "unrs-resolver@1.12.2": true
   }
 }

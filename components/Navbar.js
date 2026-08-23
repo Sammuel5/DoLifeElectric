@@ -68,6 +68,11 @@ export default function Navbar() {
   const { theme, mounted } = useTheme()
   const isDark = !mounted ? true : theme === 'dark'
 
+  // ----- Theme toggle is now inside the account dropdown (desktop) and
+  // inside the mobile drawer account block (mobile). No standalone icon
+  // in the navbar (which clashed visually with the admin header and
+  // unbalanced the 4/4 symmetry).
+
   // Sliding pill (desktop only)
   const [pillStyle, setPillStyle] = useState({ left: 0, width: 0, height: 0, top: 0, opacity: 0 })
   const [pillSide, setPillSide]   = useState(null)
@@ -302,12 +307,8 @@ export default function Navbar() {
             })}
           </ul>
 
-          {/* THEME TOGGLE (desktop — creative glowing rocker) */}
-          <div className="hidden lg:flex items-center">
-            <ThemeToggle variant="icon" />
-          </div>
-
-          {/* SIGN IN / USER MENU BUTTON (desktop) */}
+          {/* SIGN IN / USER MENU BUTTON (desktop). Theme toggle lives
+              inside the dropdown below (only visible when signed in). */}
           <div className="relative" ref={menuWrapRef}>
             {session ? (
               <>
@@ -328,26 +329,37 @@ export default function Navbar() {
                 </button>
                 {userMenuOpen && (
                   <div role="menu"
-                    className="absolute right-0 top-[calc(100%+8px)] w-56 py-2 z-50"
+                    className="absolute right-0 top-[calc(100%+8px)] w-64 py-1 z-50 overflow-hidden"
                     style={{
-                      borderRadius: 8,
-                      background: isDark ? '#141414' : '#FFFFFF',
-                      border: isDark ? '1px solid #4a3a18' : '1px solid #E5DFD1',
+                      borderRadius: 14,
+                      background: isDark
+                        ? 'linear-gradient(180deg,#161616 0%,#0d0d0d 100%)'
+                        : 'linear-gradient(180deg,#FFFFFF 0%,#FBF8F2 100%)',
+                      border: isDark ? '1.5px solid #C9A84C' : '1.5px solid #B8943F',
                       boxShadow: isDark
-                        ? '0 10px 30px rgba(0,0,0,0.6)'
-                        : '0 10px 30px rgba(60,50,20,0.15)',
+                        ? '0 14px 40px rgba(0,0,0,0.75), 0 0 0 1px rgba(201,168,76,0.15)'
+                        : '0 14px 40px rgba(60,50,20,0.22)',
                     }}>
                     {isAdmin && (
                       <Link role="menuitem" href="/admin" onClick={() => setUserMenuOpen(false)}
-                        className={`flex items-center gap-3 px-4 py-2.5 text-sm font-display uppercase tracking-widest transition-colors ${
+                        className={`flex items-center gap-3 px-5 py-3.5 font-display uppercase tracking-[0.15em] text-base transition-colors ${
                           isDark ? 'text-white hover:bg-gold/10 hover:text-gold' : 'text-[#1A1713] hover:bg-[#f5ecd4] hover:text-[#8A7530]'
                         }`}>
                         Admin Dashboard
                       </Link>
                     )}
+                    {/* Theme toggle row inside dropdown */}
+                    <div role="menuitem" className={
+                      (isAdmin ? 'border-t ' : '') +
+                      (isDark ? 'border-gold/15' : 'border-[#E5DFD1]')
+                    }>
+                      <ThemeToggle variant="menu" />
+                    </div>
                     <button role="menuitem" onClick={() => { setUserMenuOpen(false); signOut() }}
-                      className={`w-full text-left flex items-center gap-3 px-4 py-2.5 text-sm font-display uppercase tracking-widest transition-colors ${
-                        isDark ? 'text-white/90 hover:bg-gold/10 hover:text-gold' : 'text-[#3A3326] hover:bg-[#f5ecd4] hover:text-[#8A7530]'
+                      className={`w-full text-left flex items-center gap-3 px-5 py-3.5 font-display uppercase tracking-[0.15em] text-base border-t transition-colors ${
+                        isDark
+                          ? 'text-white/80 hover:text-red-300 border-gold/15 hover:bg-red-500/10'
+                          : 'text-[#3A3326] hover:text-red-600 border-[#E5DFD1] hover:bg-red-500/5'
                       }`}>
                       Sign Out
                     </button>
@@ -444,10 +456,8 @@ export default function Navbar() {
             </ul>
           </nav>
 
-          {/* Theme toggle row (always visible above account block) */}
-          <div className={`relative border-t ${isDark ? 'border-gold/20' : 'border-[#E5DFD1]'}`}>
-            <ThemeToggle variant="drawer" />
-          </div>
+          {/* Theme toggle moved into the sign-in / account block below so
+              it sits alongside the other account actions. */}
 
           {/* Sign in / account block */}
           <div className="relative px-4 py-4">
@@ -470,6 +480,12 @@ export default function Navbar() {
                     Admin Dashboard
                   </Link>
                 )}
+                {/* Mobile theme toggle — lives in the account block, matching
+                    the desktop dropdown layout. Border separates it from the
+                    items above and below. */}
+                <div className={isDark ? 'border-y border-gold/15 -mx-0' : 'border-y border-[#E5DFD1]'}>
+                  <ThemeToggle variant="drawer" />
+                </div>
                 <button onClick={() => { setMobileOpen(false); signOut() }}
                   className={`w-full text-left px-2 py-3 font-display uppercase tracking-[0.12em] transition-colors ${
                     isDark ? 'text-white/80 hover:text-gold' : 'text-[#6B6558] hover:text-[#8A7530]'
@@ -478,24 +494,30 @@ export default function Navbar() {
                 </button>
               </>
             ) : (
-              <button onClick={() => { setMobileOpen(false); signIn('google') }}
-                className="w-full flex items-center justify-center gap-3 px-4 py-3.5 font-display uppercase tracking-[0.12em] text-white transition-all active:scale-[0.98]"
-                style={{
-                  background: 'linear-gradient(180deg, #8A7530 0%, #5C4B1F 100%)',
-                  borderRadius: 10,
-                  boxShadow: isDark
-                    ? '0 4px 14px rgba(0,0,0,0.4)'
-                    : '0 4px 14px rgba(138,117,48,0.25)',
-                }}>
-                {/* Google G */}
-                <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
-                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                </svg>
-                Sign in with Google
-              </button>
+              <>
+                {/* Guests can also toggle theme */}
+                <div className={(isDark ? 'border-t border-gold/15 pt-2' : 'border-t border-[#E5DFD1] pt-2')}>
+                  <ThemeToggle variant="drawer" />
+                </div>
+                <button onClick={() => { setMobileOpen(false); signIn('google') }}
+                  className="w-full flex items-center justify-center gap-3 px-4 py-3.5 font-display uppercase tracking-[0.12em] text-white transition-all active:scale-[0.98]"
+                  style={{
+                    background: 'linear-gradient(180deg, #8A7530 0%, #5C4B1F 100%)',
+                    borderRadius: 10,
+                    boxShadow: isDark
+                      ? '0 4px 14px rgba(0,0,0,0.4)'
+                      : '0 4px 14px rgba(138,117,48,0.25)',
+                  }}>
+                  {/* Google G */}
+                  <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                  </svg>
+                  Sign in with Google
+                </button>
+              </>
             )}
           </div>
         </div>

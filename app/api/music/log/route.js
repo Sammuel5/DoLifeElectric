@@ -18,7 +18,7 @@ export async function POST(req) {
     }
 
     const data = await req.json().catch(() => ({}))
-    const { trackId, trackTitle, artistName, activityType } = data
+    const { trackId, trackTitle, artistName, genreName, activityType } = data
 
     if (!activityType || !['play', 'download'].includes(activityType)) {
       return NextResponse.json({ error: 'Invalid activity type' }, { status: 400 })
@@ -42,6 +42,7 @@ export async function POST(req) {
       trackId: trackId || null,
       trackTitle: (trackTitle || '').slice(0, 200),
       artistName: (artistName || '').slice(0, 200),
+      genreName: (genreName || '').slice(0, 100),
       activityType,
       userEmail: session.user.email.toLowerCase().trim(),
       userName: session.user.name || '',

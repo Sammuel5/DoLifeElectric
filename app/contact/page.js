@@ -81,7 +81,7 @@ export default function ContactPage() {
           src="/uploads/images/home/contact-dancer-left.png"
           alt=""
           className="h-[38vh] sm:h-[50vh] md:h-[70vh] lg:h-[80vh] w-auto object-contain -translate-x-[20%] sm:-translate-x-[15%] md:-translate-x-[10%] scale-x-[-1]"
-        />
+         loading="lazy" decoding="async" />
       </div>
       {/* LEFT dancer: foreground (smaller; on mobile tucked closer to edge) */}
       <div className="pointer-events-none absolute left-0 bottom-0 z-[3] block">
@@ -95,7 +95,7 @@ export default function ContactPage() {
             opacity: 0.55,
             filter: 'drop-shadow(8px 0 24px rgba(0,0,0,0.6))',
           }}
-        />
+         loading="lazy" decoding="async" />
       </div>
 
       {/* RIGHT dancer: faded ghost duplicate behind */}
@@ -104,7 +104,7 @@ export default function ContactPage() {
           src="/uploads/images/home/contact-dancer-right.png"
           alt=""
           className="h-[38vh] sm:h-[50vh] md:h-[70vh] lg:h-[80vh] w-auto object-contain translate-x-[20%] sm:translate-x-[15%] md:translate-x-[10%]"
-        />
+         loading="lazy" decoding="async" />
       </div>
       {/* RIGHT dancer: foreground (smaller; on mobile tucked closer to edge) */}
       <div className="pointer-events-none absolute right-0 bottom-0 z-[3] block">
@@ -118,7 +118,7 @@ export default function ContactPage() {
             opacity: 0.55,
             filter: 'drop-shadow(-8px 0 24px rgba(0,0,0,0.6))',
           }}
-        />
+         loading="lazy" decoding="async" />
       </div>
 
       {/* ========== CONTENT (centered, readable over dancers) ========== */}
@@ -197,7 +197,7 @@ export default function ContactPage() {
               aria-hidden="true"
               className="w-14 h-14 md:w-16 md:h-16 mb-3 md:mb-4 opacity-95"
               style={{ filter: 'brightness(0) invert(1)' }}
-            />
+             loading="lazy" decoding="async" />
             <h3 className="font-display font-bold uppercase text-white text-xl md:text-2xl mb-3 leading-tight">
               Sign in Required
             </h3>

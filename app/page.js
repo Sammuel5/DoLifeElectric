@@ -20,12 +20,28 @@ function HeroBackgroundVideo() {
   const [isPlaying, setIsPlaying] = useState(true)
   const [isMuted, setIsMuted] = useState(true)
   const [showControls, setShowControls] = useState(false)
+  // Don't force preload the whole video on mobile/metered connections —
+  // only preload metadata so the poster shows up fast and playback starts
+  // when the browser decides it has spare bandwidth.
+  const [shouldPreloadAuto, setShouldPreloadAuto] = useState(false)
 
   useEffect(() => {
     const v = videoRef.current
     if (!v) return
+    // Heuristic: preload=auto on desktop / fast connections; metadata-only on mobile
+    const isSmall = window.matchMedia('(max-width: 1023px)').matches
+    const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection
+    const isSlow = conn && (conn.saveData || /2g|3g|slow-2g/i.test(conn.effectiveType || ''))
+    if (!isSmall && !isSlow) {
+      v.preload = 'auto'
+      setShouldPreloadAuto(true)
+    } else {
+      v.preload = 'metadata'
+    }
     const tryPlay = () => { v.play().catch(() => {}) }
-    tryPlay()
+    // Small delay so the hero text/logo render first, then the video starts
+    const t = setTimeout(tryPlay, 150)
+    return () => clearTimeout(t)
   }, [])
 
   const togglePlay = () => {
@@ -55,7 +71,8 @@ function HeroBackgroundVideo() {
         muted
         loop
         playsInline
-        preload="auto"
+        preload={shouldPreloadAuto ? 'auto' : 'metadata'}
+        poster="/uploads/images/home/video-poster.jpg"
         onError={() => setVideoReady(false)}
         onPlay={() => setIsPlaying(true)}
         onPause={() => setIsPlaying(false)}
@@ -237,6 +254,7 @@ function HomeContent() {
                 alt="DLE"
                 className="w-[85px] sm:w-[105px] h-auto"
                 style={{ filter: 'drop-shadow(0 8px 24px rgba(0,0,0,0.55))' }}
+                fetchPriority="high"
               />
               {/* Wordmark */}
               <div className="mt-1.5 mb-3 flex flex-col items-center">
@@ -318,7 +336,7 @@ function HomeContent() {
                 marginBottom: '-4%',
                 filter: 'drop-shadow(0 -10px 30px rgba(0,0,0,0.5))',
               }}
-            />
+             loading="lazy" decoding="async" />
           </div>
 
           {/* ===== DESKTOP HERO (lg+): original approved left-aligned layout ===== */}
@@ -373,7 +391,7 @@ function HomeContent() {
                 maxHeight: 'calc(100dvh - var(--nav-h))',
                 filter: 'drop-shadow(-20px 20px 40px rgba(0,0,0,0.35))',
               }}
-            />
+             loading="lazy" decoding="async" />
           </div>
 
           {/* Desktop down arrow */}
@@ -642,7 +660,7 @@ function HomeContent() {
           alt=""
           aria-hidden="true"
           className="absolute inset-0 w-full h-full object-cover select-none"
-        />
+         loading="lazy" decoding="async" />
         {/* Subtle darkening overlay to ensure text legibility (kept light so bronze BG shows) */}
         <div
           aria-hidden="true"
@@ -752,7 +770,7 @@ function HomeContent() {
               alt=""
               aria-hidden="true"
               className="absolute inset-0 w-full h-full object-cover"
-            />
+             loading="lazy" decoding="async" />
             <div
               className="absolute inset-0 pointer-events-none"
               style={{
@@ -825,7 +843,7 @@ function HomeContent() {
                     aria-hidden="true"
                     className="w-11 h-11 md:w-12 md:h-12 mb-3 opacity-95"
                     style={{ filter: 'brightness(0) invert(1)' }}
-                  />
+                   loading="lazy" decoding="async" />
                   <h3 className="font-display font-bold uppercase text-white text-xl md:text-2xl mb-3 leading-tight">
                     Sign in Required
                   </h3>

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { requireSuperAdmin } from '@/lib/auth'
+import { requirePermission } from '@/lib/auth'
 import dbConnect from '@/lib/dbConnect'
 import { isDbDownError } from '@/lib/dbSafe'
 import TrackActivity from '@/models/TrackActivity'
@@ -12,9 +12,10 @@ function emptyPagination(page = 1, limit = 10) {
 }
 
 // GET /api/music/activity — list track activity (paginated)
+// Allowed for: super admin OR any admin with analytics permission
 export async function GET(req) {
   try {
-    const auth = await requireSuperAdmin()
+    const auth = await requirePermission('analytics')
     if (!auth.allowed) return auth.error
 
     await dbConnect()

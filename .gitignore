@@ -1,65 +1,93 @@
-# Dependencies
+# ═══════════════════════════════════════════════════════════════════════════
+# DLE Entertainment — .gitignore
+# Files/folders listed here will NEVER be committed to GitHub.
+# ═══════════════════════════════════════════════════════════════════════════
+
+# ── Dependencies ──────────────────────────────────────────────────────────
 node_modules/
 jspm_packages/
 
-# Next.js build output
+# ── Next.js / Build output ───────────────────────────────────────────────
 .next/
 out/
-
-# Production build
 build/
 dist/
 
-# Environment variables — NEVER commit these (they contain API keys, secrets, DB URIs)
+# ── 🔒 SECRETS / ENVIRONMENT VARIABLES ────────────────────────────────────
+# THESE FILES CONTAIN API KEYS, DATABASE PASSWORDS, AND SECRETS.
+# NEVER commit them. Use .env.example as the public template.
 .env
 .env.local
+.env.*.local
 .env.development.local
 .env.test.local
 .env.production.local
 
-# Logs
+# ── Logs ──────────────────────────────────────────────────────────────────
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 *.log
 
-# macOS / Windows / Linux
-.DS_Store
-Thumbs.db
-Desktop.ini
+# ── Uploaded user content (large files + user data) ──────────────────────
+# public/uploads/*
+# uploads/
+# !public/uploads/.gitkeep
 
-# Python (if any scripts)
-__pycache__/
-*.pyc
-*.pyo
+# ── Vercel / deployment ──────────────────────────────────────────────────
+.vercel
 
-# IDE / editor
+# ── Testing / coverage ───────────────────────────────────────────────────
+coverage/
+.nyc_output/
+
+# ── Cache directories ────────────────────────────────────────────────────
+.cache/
+.eslintcache
+.turbo/
+*.tgz
+
+# ── IDE / editor ─────────────────────────────────────────────────────────
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
 
-# Testing / coverage
-coverage/
-.nyc_output/
+# ── Backup / temp files ──────────────────────────────────────────────────
+*.bak
+*.tmp
+*.old
+*.orig
 
-# Misc
-*.tgz
-.cache/
-.eslintcache
-.turbo/
-
-# Vercel / deployment
-.vercel
-
-# Uploaded user content — can contain large files and user data
-# (safe to keep local but not commit)
-public/uploads/*
-uploads/
-!public/uploads/.gitkeep
-
-# OS temp
+# ── OS junk ──────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+Desktop.ini
 tmp/
 temp/
+
+# ── Python (for any diagnostic scripts) ─────────────────────────────────
+__pycache__/
+*.pyc
+*.pyo
+
+# ── Credential / key files (extra safety) ────────────────────────────────
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+id_*
+id_rsa*
+id_ed25519*
+.ssh/
+.npmrc
+.yarnrc
+.netrc
+credentials.json
+service-account*.json
+*credentials*.json
+*secret*.json

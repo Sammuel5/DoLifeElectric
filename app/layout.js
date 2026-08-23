@@ -34,6 +34,15 @@ export default function RootLayout({ children }) {
       <head>
         {/* Runs BEFORE React hydrates — prevents flash of wrong theme */}
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+
+        {/* Performance hints: start TCP+TLS handshakes early so Google OAuth
+            and third-party requests don't pay RTT cost on first click. */}
+        <link rel="preconnect" href="https://accounts.google.com" crossOrigin="" />
+        <link rel="preconnect" href="https://www.googleapis.com" crossOrigin="" />
+        <link rel="dns-prefetch" href="https://accounts.google.com" />
+
+        {/* Preload the small DLE logo so it appears immediately in the hero. */}
+        <link rel="preload" as="image" href="/dlelogo/dle-logo-sm.png" fetchPriority="high" />
       </head>
       <body
         className={`${inter.className} flex flex-col`}

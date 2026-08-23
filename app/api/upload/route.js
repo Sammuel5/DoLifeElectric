@@ -3,6 +3,7 @@ import { requirePermission } from '@/lib/auth'
 import { writeFile, mkdir } from 'fs/promises'
 import { existsSync } from 'fs'
 import path from 'path'
+import { uploadToCloudinary, isCloudinaryEnabled } from '@/lib/cloudinary'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -32,8 +33,8 @@ export async function POST(req) {
 
     const maxSizes = {
       images: 10 * 1024 * 1024,
-      audio: 50 * 1024 * 1024,
-      videos: 100 * 1024 * 1024,
+      audio: 80 * 1024 * 1024,
+      videos: 200 * 1024 * 1024,
     }
     const maxSize = maxSizes[folder] || 10 * 1024 * 1024
     if (file.size && file.size > maxSize) {
@@ -54,7 +55,7 @@ export async function POST(req) {
     const ext = (path.extname(originalName) || '').toLowerCase()
     const baseName = path.basename(originalName, ext).replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 40)
 
-    // Whitelist of SAFE extensions per folder — block executable/script/SVG/HTML files
+    // Whitelist of SAFE extensions per folder
     const allowedExts = {
       images: ['.jpg', '.jpeg', '.png', '.webp', '.gif'],
       audio:  ['.mp3', '.wav', '.ogg', '.m4a', '.aac', '.flac'],
@@ -67,19 +68,41 @@ export async function POST(req) {
         { status: 400 }
       )
     }
-    // Also validate MIME type matches extension family
+
     const mime = (file.type || '').toLowerCase()
     const mimeOk =
       (folder === 'images' && mime.startsWith('image/') && mime !== 'image/svg+xml') ||
       (folder === 'audio'  && mime.startsWith('audio/')) ||
       (folder === 'videos' && mime.startsWith('video/'))
     if (!mimeOk && mime !== '') {
-      // Don't block on empty mime (some browsers skip it), but block obviously wrong types
       return NextResponse.json({ error: `File type (${mime || 'unknown'}) does not match ${folder} folder.` }, { status: 400 })
     }
 
-    const filename = `${Date.now()}-${baseName}${ext}`
+    // ──── Try Cloudinary first (fast global CDN, works on Vercel) ────
+    if (isCloudinaryEnabled()) {
+      try {
+        const result = await uploadToCloudinary(buffer, folder, originalName)
+        if (result) {
+          console.log(`[upload] Cloudinary OK: ${result.public_id} (${result.bytes} bytes) by ${auth.session.user.email} — ${result.resource_type}`)
+          return NextResponse.json({
+            url: result.url,
+            filename: originalName,
+            size: result.bytes,
+            cdn: 'cloudinary',
+            public_id: result.public_id,
+            width: result.width || null,
+            height: result.height || null,
+            duration: result.duration || null,
+            format: result.format || null,
+          })
+        }
+      } catch (cldErr) {
+        console.error('[upload] Cloudinary failed, falling back to local:', cldErr.message)
+      }
+    }
 
+    // ──── LOCAL FALLBACK (dev / no Cloudinary) ────
+    const filename = `${Date.now()}-${baseName}${ext}`
     const uploadDir = path.join(process.cwd(), 'public', 'uploads', folder)
     try {
       if (!existsSync(uploadDir)) {
@@ -89,13 +112,21 @@ export async function POST(req) {
     } catch (writeErr) {
       console.error('[upload] Write error:', writeErr)
       return NextResponse.json({
-        error: `Could not save file: ${writeErr.message}. On Vercel production, use a cloud storage service like Cloudinary.`,
+        error: isCloudinaryEnabled()
+          ? `Upload failed: ${writeErr.message}`
+          : `Could not save file on Vercel's read-only filesystem. Configure Cloudinary in env vars to fix this.`,
+        hint: !isCloudinaryEnabled() ? 'Set CLOUDINARY_URL (or CLOUDINARY_CLOUD_NAME + CLOUDINARY_API_KEY + CLOUDINARY_API_SECRET) in Vercel env vars.' : undefined,
       }, { status: 500 })
     }
 
     const publicUrl = `/uploads/${folder}/${filename}`
-    console.log(`[upload] Success: ${publicUrl} (${buffer.length} bytes) by ${auth.session.user.email}`)
-    return NextResponse.json({ url: publicUrl, filename, size: buffer.length })
+    console.log(`[upload] Local OK: ${publicUrl} (${buffer.length} bytes) by ${auth.session.user.email}`)
+    return NextResponse.json({
+      url: publicUrl,
+      filename,
+      size: buffer.length,
+      cdn: 'local',
+    })
   } catch (e) {
     console.error('[upload] Unexpected error:', e)
     return NextResponse.json({ error: e.message || 'Upload failed' }, { status: 500 })

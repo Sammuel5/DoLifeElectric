@@ -31,9 +31,9 @@ pnpm-debug.log*
 *.log
 
 # ── Uploaded user content (large files + user data) ──────────────────────
-public/uploads/*
-uploads/
-!public/uploads/.gitkeep
+#public/uploads/*
+#uploads/
+#!public/uploads/.gitkeep
 
 # ── Vercel / deployment ──────────────────────────────────────────────────
 .vercel

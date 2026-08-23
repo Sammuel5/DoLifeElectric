@@ -21,7 +21,7 @@ export default function FAQClient() {
       <div
         aria-hidden="true"
         className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-        style={{ backgroundImage: 'url(/dark-texture.png)' }}
+        style={{ backgroundImage: 'url(/dark-texture.webp)' }}
       />
       <div aria-hidden="true" className="absolute inset-0 bg-black/40" />
 
@@ -60,7 +60,7 @@ export default function FAQClient() {
             <div
               aria-hidden="true"
               className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-              style={{ backgroundImage: 'url(/dark-texture.png)' }}
+              style={{ backgroundImage: 'url(/dark-texture.webp)' }}
             />
             {/* Yellow-tint wash over the leather so the box stays gold/yellow — darker so texture shows through */}
             <div

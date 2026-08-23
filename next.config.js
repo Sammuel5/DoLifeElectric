@@ -77,13 +77,19 @@ const nextConfig = {
         ],
       },
       {
-        source: '/dark-texture.png',
+        source: '/dark-texture.:ext(webp|jpg|jpeg|png)',
         headers: [
           { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
         ],
       },
       {
-        source: '/header-texture.png',
+        source: '/header-texture.:ext(webp|jpg|jpeg|png)',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+        ],
+      },
+      {
+        source: '/:all*.(jpg|jpeg|png|webp|avif|gif|svg|mp3|wav|m4a|mp4|webm|woff2)',
         headers: [
           { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
         ],

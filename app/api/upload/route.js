@@ -89,7 +89,7 @@ export async function POST(req) {
     } catch (writeErr) {
       console.error('[upload] Write error:', writeErr)
       return NextResponse.json({
-        error: `Could not save file: ${writeErr.message}. On Vercel production, use a cloud storage service like Cloudinary.`,
+        error: `Uploads only work when running locally (localhost). On Vercel the server filesystem is read-only — run \`npm run dev\` on your PC and upload there, then push the public/uploads/ folder to GitHub so Vercel serves it as a static file.`,
       }, { status: 500 })
     }
 

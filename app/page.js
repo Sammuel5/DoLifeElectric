@@ -330,7 +330,7 @@ function HomeContent() {
               alt="DLE Artist"
               className="block w-auto"
               style={{
-                height: 'min(62vh, 520px)',
+                height: 'min(62vh, 400px)',
                 maxHeight: '66dvh',
                 marginRight: '-6%',
                 marginBottom: '-4%',
@@ -387,7 +387,7 @@ function HomeContent() {
               alt="DLE Artist"
               className="block w-auto"
               style={{
-                height: 'min(92vh, 780px)',
+                height: 'min(92vh, 500px)',
                 maxHeight: 'calc(100dvh - var(--nav-h))',
                 filter: 'drop-shadow(-20px 20px 40px rgba(0,0,0,0.35))',
               }}

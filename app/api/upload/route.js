@@ -54,6 +54,27 @@ export async function POST(req) {
     const ext = (path.extname(originalName) || '').toLowerCase()
     const baseName = path.basename(originalName, ext).replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 40)
 
+    // Optional subfolder under the chosen `folder` (e.g. group name for images).
+    // Sanitize to a safe folder name: letters, digits, dash, underscore, dot; max 60 chars.
+    // We DO NOT allow path separators — the API will silently strip them and refuse anything that
+    // tries to escape the uploads root (../, etc.).
+    const rawSubfolder = (formData.get('subfolder') || '').toString()
+    let subfolder = ''
+    if (rawSubfolder) {
+      // Strip path separators, then keep only safe chars
+      const cleaned = rawSubfolder
+        .replace(/[\\/]/g, '')                       // no slashes at all
+        .replace(/\.\.+/g, '')                       // no ".."
+        .replace(/[^a-zA-Z0-9_\- .]/g, '_')          // only safe chars
+        .replace(/\s+/g, ' ')                        // collapse whitespace
+        .trim()
+        .slice(0, 60)
+      // Disallow "." and ".." as the final segment
+      if (cleaned && cleaned !== '.' && cleaned !== '..') {
+        subfolder = cleaned
+      }
+    }
+
     // Whitelist of SAFE extensions per folder — block executable/script/SVG/HTML files
     const allowedExts = {
       images: ['.jpg', '.jpeg', '.png', '.webp', '.gif'],
@@ -80,20 +101,37 @@ export async function POST(req) {
 
     const filename = `${Date.now()}-${baseName}${ext}`
 
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads', folder)
+    // Build the destination: public/uploads/{folder}/{subfolder?}/{filename}
+    // subfolder is only used for the 'images' folder (and 'videos' / 'audio' if explicitly provided)
+    // to avoid weird folder names in audio/videos which currently don't use subfolders.
+    const useSubfolder = !!subfolder && (folder === 'images' || formData.get('subfolder') !== null)
+    const targetFolder = useSubfolder
+      ? path.join(process.cwd(), 'public', 'uploads', folder, subfolder)
+      : path.join(process.cwd(), 'public', 'uploads', folder)
+
+    // SAFETY: ensure the resolved target is still inside public/uploads (defense in depth)
+    const uploadsRoot = path.join(process.cwd(), 'public', 'uploads')
+    const resolved = path.resolve(targetFolder)
+    if (!resolved.startsWith(path.resolve(uploadsRoot) + path.sep) && resolved !== path.resolve(uploadsRoot)) {
+      return NextResponse.json({ error: 'Invalid subfolder path.' }, { status: 400 })
+    }
+
     try {
-      if (!existsSync(uploadDir)) {
-        await mkdir(uploadDir, { recursive: true })
+      if (!existsSync(targetFolder)) {
+        await mkdir(targetFolder, { recursive: true })
       }
-      await writeFile(path.join(uploadDir, filename), buffer)
+      await writeFile(path.join(targetFolder, filename), buffer)
     } catch (writeErr) {
       console.error('[upload] Write error:', writeErr)
       return NextResponse.json({
-        error: `Uploads only work when running locally (localhost). On Vercel the server filesystem is read-only — run \`npm run dev\` on your PC and upload there, then push the public/uploads/ folder to GitHub so Vercel serves it as a static file.`,
+        error: `Could not save file: ${writeErr.message}. On Vercel production, use a cloud storage service like Cloudinary.`,
       }, { status: 500 })
     }
 
-    const publicUrl = `/uploads/${folder}/${filename}`
+    // Build the public URL: include subfolder segment if used
+    const publicUrl = useSubfolder
+      ? `/uploads/${folder}/${subfolder}/${filename}`
+      : `/uploads/${folder}/${filename}`
     console.log(`[upload] Success: ${publicUrl} (${buffer.length} bytes) by ${auth.session.user.email}`)
     return NextResponse.json({ url: publicUrl, filename, size: buffer.length })
   } catch (e) {

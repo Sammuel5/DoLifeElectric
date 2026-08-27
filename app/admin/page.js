@@ -960,9 +960,29 @@ function ArtistsManager({ artists, onRefresh }) {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  const uploadFile = async (e, field) => {
-    const file = e.target.files?.[0]; if (!file) return
-    const fd = new FormData(); fd.append('file', file); fd.append('folder', field === 'image' ? 'images' : 'videos')
+const uploadFile = async (e, field) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const fd = new FormData()
+    fd.append('file', file)
+    fd.append('folder', field === 'image' ? 'images' : 'videos')
+
+    // For IMAGE uploads, organize files into a subfolder based on the group:
+    //   - If this entry IS a group → use its own name
+    //   - If this entry is a member of a group → use the parent group's name
+    //   - Otherwise (solo artist) → no subfolder (keep flat)
+    // Videos are NOT subfoldered (keploads simple; can extend later).
+    if (field === 'image') {
+      let subfolder = ''
+      if (form.isGroup && form.name?.trim()) {
+        subfolder = form.name.trim()
+      } else if (!form.isGroup && form.groupId) {
+        const parent = groups.find(g => String(g._id) === String(form.groupId))
+        if (parent?.name) subfolder = parent.name
+      }
+      if (subfolder) fd.append('subfolder', subfolder)
+    }
+
     const res = await fetch('/api/upload', { method: 'POST', body: fd })
     const d = await res.json()
     if (d.url) { setForm({ ...form, [field]: d.url }); toast.success('Uploaded!') }

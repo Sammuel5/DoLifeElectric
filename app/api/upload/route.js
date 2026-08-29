@@ -3,6 +3,7 @@ import { requirePermission } from '@/lib/auth'
 import { writeFile, mkdir } from 'fs/promises'
 import { existsSync } from 'fs'
 import path from 'path'
+import { uploadToCloudinary, isCloudinaryEnabled } from '@/lib/cloudinary'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -20,8 +21,15 @@ export async function POST(req) {
 
     const folder = formData.get('folder') || 'images'
 
-    // audio upload requires 'music' permission; images/videos require 'artists' permission
-    const perm = folder === 'audio' ? 'music' : 'artists'
+    // Map folder to required permission. `announcements` folder uses the
+    // `announcements` permission (granted in Admin schema below).
+    const folderPermMap = {
+      audio: 'music',
+      images: 'artists',
+      videos: 'artists',
+      announcements: 'announcements',
+    }
+    const perm = folderPermMap[folder] || 'artists'
     const auth = await requirePermission(perm)
     if (!auth.allowed) return auth.error
 
@@ -34,6 +42,7 @@ export async function POST(req) {
       images: 10 * 1024 * 1024,
       audio: 50 * 1024 * 1024,
       videos: 100 * 1024 * 1024,
+      announcements: 20 * 1024 * 1024, // 20MB — covers large posters + short videos
     }
     const maxSize = maxSizes[folder] || 10 * 1024 * 1024
     if (file.size && file.size > maxSize) {
@@ -54,32 +63,28 @@ export async function POST(req) {
     const ext = (path.extname(originalName) || '').toLowerCase()
     const baseName = path.basename(originalName, ext).replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 40)
 
-    // Optional subfolder under the chosen `folder` (e.g. group name for images).
-    // Sanitize to a safe folder name: letters, digits, dash, underscore, dot; max 60 chars.
-    // We DO NOT allow path separators — the API will silently strip them and refuse anything that
-    // tries to escape the uploads root (../, etc.).
+    // Optional subfolder under the chosen `folder`
     const rawSubfolder = (formData.get('subfolder') || '').toString()
     let subfolder = ''
     if (rawSubfolder) {
-      // Strip path separators, then keep only safe chars
       const cleaned = rawSubfolder
-        .replace(/[\\/]/g, '')                       // no slashes at all
-        .replace(/\.\.+/g, '')                       // no ".."
-        .replace(/[^a-zA-Z0-9_\- .]/g, '_')          // only safe chars
-        .replace(/\s+/g, ' ')                        // collapse whitespace
+        .replace(/[\\/]/g, '')
+        .replace(/\.+/g, '')
+        .replace(/[^a-zA-Z0-9_\- .]/g, '_')
+        .replace(/\s+/g, ' ')
         .trim()
         .slice(0, 60)
-      // Disallow "." and ".." as the final segment
       if (cleaned && cleaned !== '.' && cleaned !== '..') {
         subfolder = cleaned
       }
     }
 
-    // Whitelist of SAFE extensions per folder — block executable/script/SVG/HTML files
+    // Whitelist of SAFE extensions per folder
     const allowedExts = {
-      images: ['.jpg', '.jpeg', '.png', '.webp', '.gif'],
-      audio:  ['.mp3', '.wav', '.ogg', '.m4a', '.aac', '.flac'],
-      videos: ['.mp4', '.webm', '.mov', '.m4v'],
+      images:         ['.jpg', '.jpeg', '.png', '.webp', '.gif'],
+      audio:          ['.mp3', '.wav', '.ogg', '.m4a', '.aac', '.flac'],
+      videos:         ['.mp4', '.webm', '.mov', '.m4v'],
+      announcements:  ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.mp4', '.webm', '.mov'],
     }
     const allowed = allowedExts[folder] || allowedExts.images
     if (!allowed.includes(ext)) {
@@ -88,28 +93,53 @@ export async function POST(req) {
         { status: 400 }
       )
     }
-    // Also validate MIME type matches extension family
     const mime = (file.type || '').toLowerCase()
+    const isVideo = folder === 'videos' || (folder === 'announcements' && mime.startsWith('video/')) || ['.mp4', '.webm', '.mov', '.m4v'].includes(ext)
+    const isAudio = folder === 'audio'
+    const isImage = !isVideo && !isAudio && mime.startsWith('image/')
     const mimeOk =
-      (folder === 'images' && mime.startsWith('image/') && mime !== 'image/svg+xml') ||
-      (folder === 'audio'  && mime.startsWith('audio/')) ||
-      (folder === 'videos' && mime.startsWith('video/'))
+      (isImage && mime.startsWith('image/') && mime !== 'image/svg+xml') ||
+      (isAudio && mime.startsWith('audio/')) ||
+      (isVideo && mime.startsWith('video/'))
     if (!mimeOk && mime !== '') {
-      // Don't block on empty mime (some browsers skip it), but block obviously wrong types
       return NextResponse.json({ error: `File type (${mime || 'unknown'}) does not match ${folder} folder.` }, { status: 400 })
     }
 
+    // ---------------- CLOUDINARY PATH (production) ----------------
+    if (isCloudinaryEnabled()) {
+      try {
+        // Pick the correct Cloudinary resource folder based on file content
+        const cloudFolder = isVideo ? 'videos' : isAudio ? 'audio' : 'images'
+        const cloudSub = folder === 'announcements' ? 'announcements' : (subfolder || '')
+        const result = await uploadToCloudinary(buffer, {
+          folder: cloudFolder,
+          subfolder: cloudSub,
+          filename: originalName,
+        })
+        if (result?.url) {
+          console.log(`[upload] Cloudinary success: ${result.public_id} (${result.bytes} bytes) by ${auth.session.user.email}`)
+          return NextResponse.json({
+            url: result.url,
+            public_id: result.public_id,
+            filename: originalName,
+            size: result.bytes,
+            storage: 'cloudinary',
+            mediaType: isVideo ? 'video' : isAudio ? 'audio' : 'image',
+          })
+        }
+      } catch (cErr) {
+        console.error('[upload] Cloudinary upload failed, falling back to local:', cErr.message)
+        // fall through to local
+      }
+    }
+
+    // ---------------- LOCAL PATH (dev / fallback) ----------------
     const filename = `${Date.now()}-${baseName}${ext}`
 
-    // Build the destination: public/uploads/{folder}/{subfolder?}/{filename}
-    // subfolder is only used for the 'images' folder (and 'videos' / 'audio' if explicitly provided)
-    // to avoid weird folder names in audio/videos which currently don't use subfolders.
-    const useSubfolder = !!subfolder && (folder === 'images' || formData.get('subfolder') !== null)
-    const targetFolder = useSubfolder
+    const targetFolder = subfolder
       ? path.join(process.cwd(), 'public', 'uploads', folder, subfolder)
       : path.join(process.cwd(), 'public', 'uploads', folder)
 
-    // SAFETY: ensure the resolved target is still inside public/uploads (defense in depth)
     const uploadsRoot = path.join(process.cwd(), 'public', 'uploads')
     const resolved = path.resolve(targetFolder)
     if (!resolved.startsWith(path.resolve(uploadsRoot) + path.sep) && resolved !== path.resolve(uploadsRoot)) {
@@ -123,17 +153,28 @@ export async function POST(req) {
       await writeFile(path.join(targetFolder, filename), buffer)
     } catch (writeErr) {
       console.error('[upload] Write error:', writeErr)
-      return NextResponse.json({
-        error: `Could not save file: ${writeErr.message}. On Vercel production, use a cloud storage service like Cloudinary.`,
-      }, { status: 500 })
+      // On EROFS (Vercel), give a friendly message pointing at Cloudinary
+      const isReadonly = writeErr && (writeErr.code === 'EROFS' || /read-only/i.test(writeErr.message || ''))
+      if (isReadonly) {
+        return NextResponse.json({
+          error: 'Vercel production has a read-only filesystem. Configure Cloudinary (CLOUDINARY_URL) in Environment Variables to enable uploads there. See the Cloudinary tutorial for step-by-step setup.',
+          code: 'EROFS',
+        }, { status: 500 })
+      }
+      return NextResponse.json({ error: `Could not save file: ${writeErr.message}` }, { status: 500 })
     }
 
-    // Build the public URL: include subfolder segment if used
-    const publicUrl = useSubfolder
+    const publicUrl = subfolder
       ? `/uploads/${folder}/${subfolder}/${filename}`
       : `/uploads/${folder}/${filename}`
-    console.log(`[upload] Success: ${publicUrl} (${buffer.length} bytes) by ${auth.session.user.email}`)
-    return NextResponse.json({ url: publicUrl, filename, size: buffer.length })
+    console.log(`[upload] Local success: ${publicUrl} (${buffer.length} bytes) by ${auth.session.user.email}`)
+    return NextResponse.json({
+      url: publicUrl,
+      filename,
+      size: buffer.length,
+      storage: 'local',
+      mediaType: isVideo ? 'video' : isAudio ? 'audio' : 'image',
+    })
   } catch (e) {
     console.error('[upload] Unexpected error:', e)
     return NextResponse.json({ error: e.message || 'Upload failed' }, { status: 500 })

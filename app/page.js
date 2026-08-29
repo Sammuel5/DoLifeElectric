@@ -262,7 +262,7 @@ function HomeContent() {
                   className="font-display font-semibold text-white/90 text-center"
                   style={{ fontSize: 'clamp(8px, 2.3vw, 11px)', letterSpacing: '0.25em', textShadow: '0 2px 10px rgba(0,0,0,0.6)' }}
                 >
-                  D L E &nbsp; E N T E R T A I N M E N T
+                  D L E   E N T E R T A I N M E N T
                 </p>
                 <p className="text-white/65 text-center mt-0.5"
                    style={{ fontSize: 'clamp(7px, 1.8vw, 9px)', letterSpacing: '0.15em', textShadow: '0 2px 10px rgba(0,0,0,0.6)' }}>
@@ -351,7 +351,7 @@ function HomeContent() {
                 <div className="mt-3 mb-10 flex flex-col items-center">
                   <p className="font-display font-semibold text-white/90 text-sm text-center"
                      style={{ letterSpacing: '0.45em', textShadow: '0 2px 10px rgba(0,0,0,0.6)' }}>
-                    D L E &nbsp; E N T E R T A I N M E N T
+                    D L E   E N T E R T A I N M E N T
                   </p>
                   <p className="text-white/65 text-[11px] tracking-[0.3em] uppercase mt-1 text-center"
                      style={{ textShadow: '0 2px 10px rgba(0,0,0,0.6)' }}>

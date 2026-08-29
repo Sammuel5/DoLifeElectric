@@ -5,6 +5,7 @@ import Footer from '@/components/Footer'
 import Providers from '@/components/Providers'
 import SetupBanner from '@/components/SetupBanner'
 import CustomCursor from '@/components/CustomCursor'
+import AnnouncementPopup from '@/components/AnnouncementPopup'
 import { ThemeProvider, themeInitScript } from '@/components/ThemeProvider'
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
@@ -55,6 +56,7 @@ export default function RootLayout({ children }) {
             <main className="flex-1 flex flex-col safe-bottom">{children}</main>
             <Footer />
             <CustomCursor />
+            <AnnouncementPopup />
           </Providers>
         </ThemeProvider>
       </body>

@@ -8,6 +8,7 @@ import Donation from '@/models/Donation'
 import TrackActivity from '@/models/TrackActivity'
 import Admin from '@/models/Admin'
 import Genre from '@/models/Genre'
+import Announcement from '@/models/Announcement'
 import 'server-only'
 
 export const dynamic = 'force-dynamic'
@@ -28,6 +29,7 @@ export async function GET() {
     const canMusic = isSuper || perms.music === true
     const canDonations = isSuper || perms.donations === true
     const canAnalytics = isSuper || perms.analytics === true
+    const canAnnouncements = isSuper || perms.announcements === true
 
     // Always-safe count queries, gated per permission.
     const queries = []
@@ -56,6 +58,7 @@ export async function GET() {
       )
     }
     if (isSuper) queries.push(Admin.countDocuments({ role: { $ne: 'super' } }))
+    if (canAnnouncements) queries.push(Announcement.countDocuments({ active: true }))
 
     const results = await Promise.all(queries)
     let idx = 0
@@ -78,6 +81,7 @@ export async function GET() {
       payload.uniqueListeners = Array.isArray(unique) ? unique.length : 0
     }
     if (isSuper) payload.adminCount = results[idx++] || 0
+    if (canAnnouncements) payload.announcements = results[idx++] || 0
 
     // Compute "last 7 days" plays for trend sparkline (analytics permitted users).
     if (canAnalytics) {

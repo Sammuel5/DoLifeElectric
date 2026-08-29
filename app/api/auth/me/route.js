@@ -33,12 +33,13 @@ export async function GET() {
         isSuperAdmin,
         role: isPrimaryOwner ? 'owner' : (isSuperAdmin ? 'super' : (rec ? rec.role : null)),
         permissions: isSuperAdmin
-          ? { music: true, artists: true, donations: true, analytics: true }
+          ? { music: true, artists: true, donations: true, analytics: true, announcements: true }
           : {
-              music:     !!perms.music,
-              artists:   perms.artists !== false,
-              donations: !!perms.donations,
-              analytics: !!perms.analytics,
+              music:         !!perms.music,
+              artists:       perms.artists !== false,
+              donations:     !!perms.donations,
+              analytics:     !!perms.analytics,
+              announcements: !!perms.announcements,
             },
       },
     })

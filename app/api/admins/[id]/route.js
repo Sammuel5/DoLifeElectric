@@ -21,10 +21,11 @@ function shape(a) {
     role: a.role || 'admin',
     isPrimaryOwner: norm(a.email) === norm(SUPER_ADMIN),
     permissions: {
-      music:     a.role === 'super' ? true : !!a.permissions?.music,
-      artists:   a.role === 'super' ? true : a.permissions?.artists !== false,
-      donations: a.role === 'super' ? true : !!a.permissions?.donations,
-      analytics: a.role === 'super' ? true : !!a.permissions?.analytics,
+      music:         a.role === 'super' ? true : !!a.permissions?.music,
+      artists:       a.role === 'super' ? true : a.permissions?.artists !== false,
+      donations:     a.role === 'super' ? true : !!a.permissions?.donations,
+      analytics:     a.role === 'super' ? true : !!a.permissions?.analytics,
+      announcements: a.role === 'super' ? true : !!a.permissions?.announcements,
     },
   }
 }
@@ -92,11 +93,13 @@ export async function PATCH(req, { params }) {
       updates['permissions.artists'] = true
       updates['permissions.donations'] = true
       updates['permissions.analytics'] = true
+      updates['permissions.announcements'] = true
     } else if (body.permissions && typeof body.permissions === 'object') {
-      if (typeof body.permissions.music === 'boolean')     updates['permissions.music']     = body.permissions.music
-      if (typeof body.permissions.artists === 'boolean')   updates['permissions.artists']   = body.permissions.artists
-      if (typeof body.permissions.donations === 'boolean') updates['permissions.donations'] = body.permissions.donations
-      if (typeof body.permissions.analytics === 'boolean') updates['permissions.analytics'] = body.permissions.analytics
+      if (typeof body.permissions.music === 'boolean')         updates['permissions.music']         = body.permissions.music
+      if (typeof body.permissions.artists === 'boolean')       updates['permissions.artists']       = body.permissions.artists
+      if (typeof body.permissions.donations === 'boolean')     updates['permissions.donations']     = body.permissions.donations
+      if (typeof body.permissions.analytics === 'boolean')     updates['permissions.analytics']     = body.permissions.analytics
+      if (typeof body.permissions.announcements === 'boolean') updates['permissions.announcements'] = body.permissions.announcements
     }
 
     const updated = await Admin.findByIdAndUpdate(id, { $set: updates }, { new: true, runValidators: true }).lean()

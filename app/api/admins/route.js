@@ -16,10 +16,11 @@ function shape(a) {
     role: a.role || 'admin',
     isPrimaryOwner: norm(a.email) === norm(SUPER_ADMIN),
     permissions: {
-      music:     a.role === 'super' ? true : !!a.permissions?.music,
-      artists:   a.role === 'super' ? true : a.permissions?.artists !== false,
-      donations: a.role === 'super' ? true : !!a.permissions?.donations,
-      analytics: a.role === 'super' ? true : !!a.permissions?.analytics,
+      music:         a.role === 'super' ? true : !!a.permissions?.music,
+      artists:       a.role === 'super' ? true : a.permissions?.artists !== false,
+      donations:     a.role === 'super' ? true : !!a.permissions?.donations,
+      analytics:     a.role === 'super' ? true : !!a.permissions?.analytics,
+      announcements: a.role === 'super' ? true : !!a.permissions?.announcements,
     },
     addedBy: a.addedBy || '',
     createdAt: a.createdAt,
@@ -136,10 +137,11 @@ export async function POST(req) {
       role: requestedRole,
       addedBy: auth.session.user.email,
       permissions: {
-        music:     requestedRole === 'super' ? true : !!body.permissions?.music,
-        artists:   requestedRole === 'super' ? true : (body.permissions?.artists !== false),
-        donations: requestedRole === 'super' ? true : !!body.permissions?.donations,
-        analytics: requestedRole === 'super' ? true : !!body.permissions?.analytics,
+        music:         requestedRole === 'super' ? true : !!body.permissions?.music,
+        artists:       requestedRole === 'super' ? true : (body.permissions?.artists !== false),
+        donations:     requestedRole === 'super' ? true : !!body.permissions?.donations,
+        analytics:     requestedRole === 'super' ? true : !!body.permissions?.analytics,
+        announcements: requestedRole === 'super' ? true : !!body.permissions?.announcements,
       },
     })
 

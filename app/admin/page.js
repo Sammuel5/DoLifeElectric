@@ -7,15 +7,17 @@ import {
   Crown, Download, Activity, Play, DownloadCloud, Trash, ArrowLeft, Sparkles,
   TrendingUp, Eye, EyeOff, Home, LayoutDashboard, LineChart, Check, Clock,
   Disc3, Tag, Plus, Terminal, MessageSquare, Send, Lock, Wifi,
+  Megaphone, Calendar, CalendarClock, Video, Image as ImageIcon, Timer,
+  Upload as UploadIcon, MousePointerClick,
 } from 'lucide-react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 
 /* =========================================================================
    DLE Admin Dashboard — Cinematic, professional, theme-aware.
-   Tabs: Overview (default), Artists, Music, Plays & Downloads, Gifts, Admins.
-   Super admin can grant analytics permission so specific admins can view
-   Plays & Downloads (view/export only — delete stays owner-only).
+   Tabs: Overview, Artists, Music, Plays & Downloads, Gifts, Announcements, Admins.
+   Super admin can grant analytics/announcements permissions so specific admins
+   can view those areas. Delete-actions always stay owner-only.
    ========================================================================= */
 
 async function safeFetch(url, fallback) {
@@ -47,6 +49,7 @@ export default function AdminPage() {
   const [tracks, setTracks] = useState([])
   const [genres, setGenres] = useState([])
   const [admins, setAdmins] = useState([])
+  const [announcements, setAnnouncements] = useState([])
   const [stats, setStats] = useState(null)
   const [loading, setLoading] = useState(true)
   const [dbDown, setDbDown] = useState(false)
@@ -58,6 +61,7 @@ export default function AdminPage() {
   const canArtists = isSuperAdmin || perms.artists !== false
   const canDonations = isSuperAdmin || perms.donations === true
   const canAnalytics = isSuperAdmin || perms.analytics === true
+  const canAnnouncements = isSuperAdmin || perms.announcements === true
   const canManageAdmins = isPrimaryOwner // ONLY the primary (founder) owner can add/remove/promote admins
   const isAdmin = !!session?.user?.isAdmin
 
@@ -67,10 +71,11 @@ export default function AdminPage() {
     if (canMusic) t.push({ id: 'music', label: 'Music', icon: Music })
     if (canAnalytics) t.push({ id: 'musicactivity', label: 'Plays & Downloads', icon: Activity })
     if (canDonations) t.push({ id: 'donations', label: 'Gifts', icon: BarChart3 })
+    if (canAnnouncements) t.push({ id: 'announcements', label: 'Announcements', icon: Megaphone })
     if (canManageAdmins) t.push({ id: 'admins', label: 'Admins', icon: Shield })
     return t
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [canArtists, canMusic, canDonations, canAnalytics, canManageAdmins])
+  }, [canArtists, canMusic, canDonations, canAnalytics, canAnnouncements, canManageAdmins])
 
   useEffect(() => {
     // Auto-redirect removed — unauthenticated visitors see the DevChat screen
@@ -90,12 +95,13 @@ export default function AdminPage() {
 
   const loadAll = async () => {
     setLoading(true)
-    const [st, a, m, g, ad] = await Promise.all([
+    const [st, a, m, g, ad, an] = await Promise.all([
       safeFetch('/api/admin/stats', { ok: false }),
       safeFetch('/api/artists', []),
       canMusic ? safeFetch('/api/music', []) : Promise.resolve([]),
       canMusic ? safeFetch('/api/genres', []) : Promise.resolve([]),
       canManageAdmins ? safeFetch('/api/admins', []) : Promise.resolve([]),
+      canAnnouncements ? safeFetch('/api/announcements/admin', { announcements: [] }) : Promise.resolve({ announcements: [] }),
     ])
     const any503 =
       (st && st.dbDown === true) ||
@@ -109,6 +115,7 @@ export default function AdminPage() {
     setTracks(Array.isArray(m) ? m : [])
     setGenres(Array.isArray(g) ? g : [])
     setAdmins(Array.isArray(ad) ? ad : [])
+    setAnnouncements(Array.isArray(an?.announcements) ? an.announcements : [])
     setLoading(false)
   }
 
@@ -291,7 +298,7 @@ export default function AdminPage() {
         ) : (
           <>
             {tab === 'overview' && (
-              <OverviewView stats={stats} onTab={setTab} perms={{ canArtists, canMusic, canDonations, canAnalytics, isSuperAdmin, isPrimaryOwner, canManageAdmins }} />
+              <OverviewView stats={stats} onTab={setTab} perms={{ canArtists, canMusic, canDonations, canAnalytics, canAnnouncements, isSuperAdmin, isPrimaryOwner, canManageAdmins }} />
             )}
             {tab === 'artists' && (canArtists
               ? <ArtistsManager artists={artists} onRefresh={loadAll} dbDown={dbDown} />
@@ -305,6 +312,9 @@ export default function AdminPage() {
             {tab === 'donations' && (canDonations
               ? <DonationsView isSuperAdmin={isSuperAdmin} onRefresh={loadAll} dbDown={dbDown} />
               : <NoAccessMessage feature="Gifts & Reports" description="You don't have access to gift data. Ask the owner to grant it." />)}
+            {tab === 'announcements' && (canAnnouncements
+              ? <AnnouncementsManager announcements={announcements} onRefresh={loadAll} dbDown={dbDown} />
+              : <NoAccessMessage feature="Announcements" description="You don't have permission to manage announcements." />)}
             {tab === 'admins' && (canManageAdmins
               ? <AdminsManager />
               : <NoAccessMessage feature="Admin Management" description="Only the primary owner can add, remove, or promote admins and co-owners." />)}
@@ -760,6 +770,7 @@ function OverviewView({ stats, onTab, perms }) {
   if (perms.canMusic) quickLinks.push({ id: 'music', label: 'Music', icon: Music, desc: 'Upload tracks & manage genres' })
   if (perms.canAnalytics) quickLinks.push({ id: 'musicactivity', label: 'Analytics', icon: Activity, desc: 'Plays & downloads' })
   if (perms.canDonations) quickLinks.push({ id: 'donations', label: 'Gifts', icon: BarChart3, desc: 'View fan gifts' })
+  if (perms.canAnnouncements) quickLinks.push({ id: 'announcements', label: 'Announcements', icon: Megaphone, desc: 'Pop-up greetings & promos' })
   if (perms.canManageAdmins) quickLinks.push({ id: 'admins', label: 'Admins', icon: Shield, desc: 'Manage admins & co-owners' })
 
   return (
@@ -808,6 +819,14 @@ function OverviewView({ stats, onTab, perms }) {
             value={(stats?.totalGifts ?? 0).toLocaleString()}
             sub={`${stats?.giftsLast30 ?? 0} completed last 30d`}
             icon={BarChart3}
+          />
+        )}
+        {perms.canAnnouncements && (
+          <StatCard
+            label="Active Pop-ups"
+            value={(stats?.announcements ?? 0).toLocaleString()}
+            sub="Site-wide greetings"
+            icon={Megaphone}
           />
         )}
         {perms.isSuperAdmin && (
@@ -2071,10 +2090,11 @@ function MusicActivityView({ isSuperAdmin }) {
 const ADMIN_PAGE_SIZE = 5
 
 const ADMIN_PERM_ROWS = [
-  { key: 'artists',   label: '🎨 Artists',   desc: 'Add, edit & delete artists/groups' },
-  { key: 'music',     label: '🎵 Music',      desc: 'Upload, edit & delete tracks' },
-  { key: 'donations', label: '📊 Gifts',      desc: 'View and export fan gift reports' },
-  { key: 'analytics', label: '📈 Analytics',  desc: 'View Plays & Downloads (listener data)' },
+  { key: 'artists',       label: '🎨 Artists',        desc: 'Add, edit & delete artists/groups' },
+  { key: 'music',         label: '🎵 Music',          desc: 'Upload, edit & delete tracks' },
+  { key: 'donations',     label: '📊 Gifts',          desc: 'View and export fan gift reports' },
+  { key: 'analytics',     label: '📈 Analytics',      desc: 'View Plays & Downloads (listener data)' },
+  { key: 'announcements', label: '📢 Announcements',  desc: 'Create & schedule pop-up greetings' },
 ]
 
 function AdminsManager() {
@@ -2082,7 +2102,7 @@ function AdminsManager() {
   const [email, setEmail] = useState('')
   const [name, setName] = useState('')
   const [newRole, setNewRole] = useState('admin') // 'admin' | 'super' (co-owner)
-  const [newPerms, setNewPerms] = useState({ music: false, artists: true, donations: false, analytics: false })
+  const [newPerms, setNewPerms] = useState({ music: false, artists: true, donations: false, analytics: false, announcements: false })
   const [adding, setAdding] = useState(false)
 
   // List state
@@ -2168,10 +2188,11 @@ function AdminsManager() {
     setEditName(a.name || '')
     setEditRole(a.role === 'super' && !a.isPrimaryOwner ? 'super' : 'admin')
     setEditPerms({
-      music:     !!a.permissions?.music,
-      artists:   a.permissions?.artists !== false,
-      donations: !!a.permissions?.donations,
-      analytics: !!a.permissions?.analytics,
+      music:         !!a.permissions?.music,
+      artists:       a.permissions?.artists !== false,
+      donations:     !!a.permissions?.donations,
+      analytics:     !!a.permissions?.analytics,
+      announcements: !!a.permissions?.announcements,
     })
   }
   const closeEdit = () => {
@@ -2324,7 +2345,7 @@ function AdminsManager() {
 
           <button
             type="submit"
-            disabled={adding || (newRole === 'admin' && !newPerms.music && !newPerms.artists && !newPerms.donations && !newPerms.analytics)}
+            disabled={adding || (newRole === 'admin' && !newPerms.music && !newPerms.artists && !newPerms.donations && !newPerms.analytics && !newPerms.announcements)}
             className="btn-gold w-full disabled:opacity-60"
           >
             {adding
@@ -2365,6 +2386,7 @@ function AdminsManager() {
                       ...(p.music ? [{ key: 'music', label: '🎵 Music' }] : []),
                       ...(p.donations ? [{ key: 'donations', label: '📊 Gifts' }] : []),
                       ...(p.analytics ? [{ key: 'analytics', label: '📈 Analytics' }] : []),
+                      ...(p.announcements ? [{ key: 'announcements', label: '📢 Announcements' }] : []),
                     ]
                 const locked = isPrimary
 
@@ -2597,6 +2619,424 @@ function AdminsManager() {
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+/* =========================================================================
+   ANNOUNCEMENTS MANAGER
+   Full CRUD for pop-up announcements (video / image + fireworks / balloons),
+   scheduling, duration, show-once, active toggle.
+   ========================================================================= */
+function AnnouncementsManager({ announcements, onRefresh }) {
+  const [form, setForm] = useState({
+    title: '',
+    message: '',
+    type: 'image',
+    effect: 'none',
+    mediaUrl: '',
+    publicId: '',
+    durationSec: 8,
+    startsAt: '',
+    endsAt: '',
+    active: true,
+    showOncePerUser: true,
+  })
+  const [saving, setSaving] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [editing, setEditing] = useState(null)
+
+  const reset = () => {
+    setForm({
+      title: '', message: '', type: 'image', effect: 'none',
+      mediaUrl: '', publicId: '', durationSec: 8,
+      startsAt: '', endsAt: '', active: true, showOncePerUser: true,
+    })
+    setEditing(null)
+  }
+
+  const startEdit = (a) => {
+    setEditing(a)
+    setForm({
+      title: a.title || '',
+      message: a.message || '',
+      type: a.type || 'image',
+      effect: a.effect || 'none',
+      mediaUrl: a.mediaUrl || '',
+      publicId: a.publicId || '',
+      durationSec: a.durationSec || 8,
+      startsAt: a.startsAt ? toLocalInput(a.startsAt) : '',
+      endsAt: a.endsAt ? toLocalInput(a.endsAt) : '',
+      active: a.active !== false,
+      showOncePerUser: a.showOncePerUser !== false,
+    })
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  // Convert ISO/Date to datetime-local value "YYYY-MM-DDTHH:MM"
+  const toLocalInput = (d) => {
+    const dt = new Date(d)
+    if (isNaN(dt.getTime())) return ''
+    const pad = n => String(n).padStart(2, '0')
+    return `${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(dt.getMinutes())}`
+  }
+
+  const uploadMedia = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploading(true)
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      fd.append('folder', 'announcements')
+      const res = await fetch('/api/upload', { method: 'POST', body: fd })
+      const d = await res.json().catch(() => ({}))
+      if (d.url) {
+        setForm(f => ({
+          ...f,
+          mediaUrl: d.url,
+          publicId: d.public_id || d.publicId || '',
+          type: d.mediaType === 'video' ? 'video' : 'image',
+        }))
+        toast.success('Uploaded!')
+      } else {
+        toast.error(d.error || 'Upload failed')
+      }
+    } catch (err) {
+      toast.error(err.message || 'Upload failed')
+    }
+    setUploading(false)
+  }
+
+  const save = async (e) => {
+    e.preventDefault()
+    if (!form.title.trim()) { toast.error('Title is required'); return }
+    if (!form.mediaUrl) { toast.error('Upload an image or video first, or paste a URL'); return }
+    const dur = Number(form.durationSec)
+    if (isNaN(dur) || dur < 3 || dur > 120) { toast.error('Duration must be 3–120 seconds'); return }
+    setSaving(true)
+    try {
+      const payload = {
+        title: form.title.trim(),
+        message: form.message.trim(),
+        type: form.type,
+        effect: form.effect,
+        mediaUrl: form.mediaUrl,
+        publicId: form.publicId,
+        durationSec: dur,
+        startsAt: form.startsAt ? new Date(form.startsAt).toISOString() : null,
+        endsAt: form.endsAt ? new Date(form.endsAt).toISOString() : null,
+        active: !!form.active,
+        showOncePerUser: !!form.showOncePerUser,
+      }
+      const url = editing ? `/api/announcements/${editing.id}` : '/api/announcements'
+      const method = editing ? 'PATCH' : 'POST'
+      const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+      const d = await res.json().catch(() => ({}))
+      if (res.ok) {
+        toast.success(editing ? 'Announcement updated!' : 'Announcement published!')
+        reset()
+        onRefresh()
+      } else {
+        toast.error(d.error || 'Failed to save')
+      }
+    } catch (err) {
+      toast.error(err.message)
+    }
+    setSaving(false)
+  }
+
+  const toggleActive = async (a) => {
+    try {
+      const res = await fetch(`/api/announcements/${a.id}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ active: !a.active }),
+      })
+      if (res.ok) { toast.success(a.active ? 'Hidden' : 'Activated'); onRefresh() }
+      else toast.error('Failed to update')
+    } catch (e) { toast.error(e.message) }
+  }
+
+  const del = async (a) => {
+    if (!confirm(`Delete announcement "${a.title}"?`)) return
+    try {
+      const res = await fetch(`/api/announcements/${a.id}`, { method: 'DELETE' })
+      if (res.ok) { toast.success('Deleted'); if (editing && editing.id === a.id) reset(); onRefresh() }
+      else toast.error('Failed')
+    } catch (e) { toast.error(e.message) }
+  }
+
+  const now = new Date()
+  const getStatus = (a) => {
+    if (!a.active) return { label: 'Inactive', color: 'var(--text-dim)', bg: 'rgba(128,128,128,0.12)' }
+    if (a.startsAt && new Date(a.startsAt) > now) return { label: 'Scheduled', color: '#60a5fa', bg: 'rgba(96,165,250,0.12)' }
+    if (a.endsAt && new Date(a.endsAt) < now) return { label: 'Expired', color: '#f87171', bg: 'rgba(248,113,113,0.12)' }
+    return { label: 'Live Now', color: '#34d399', bg: 'rgba(52,211,153,0.12)' }
+  }
+
+  const formatDate = (d) => {
+    if (!d) return '—'
+    const dt = new Date(d)
+    if (isNaN(dt.getTime())) return '—'
+    return dt.toLocaleString('en-PH', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+  }
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 md:gap-6 min-w-0">
+      {/* === FORM === */}
+      <form onSubmit={save} className="surface-card p-4 sm:p-6 space-y-4 h-fit rounded-sm lg:col-span-2 min-w-0">
+        <div className="flex items-center gap-2 pb-3 mb-2" style={{ borderBottom: '1px solid var(--border)' }}>
+          <Megaphone size={17} className="gold-text" />
+          <h3 className="font-display text-lg sm:text-xl uppercase" style={{ color: 'var(--text)' }}>
+            {editing ? 'Edit Pop-up' : 'New Pop-up Announcement'}
+          </h3>
+        </div>
+
+        <Callout tone="gold" icon={Sparkles}>
+          Pop-ups show full-screen to every visitor on their next page load. Video plays
+          until ended; images auto-dismiss after the timer (default 8s). Visitors can skip any time.
+        </Callout>
+
+        <div>
+          <label className="block text-[10px] sm:text-xs uppercase tracking-widest mb-1.5 font-semibold" style={{ color: 'var(--text-dim)' }}>Title *</label>
+          <input
+            type="text"
+            required
+            maxLength={120}
+            placeholder="e.g. Winner of the Month — Pablo!"
+            value={form.title}
+            onChange={e => setForm({ ...form, title: e.target.value })}
+            className="form-input"
+          />
+        </div>
+
+        <div>
+          <label className="block text-[10px] sm:text-xs uppercase tracking-widest mb-1.5 font-semibold" style={{ color: 'var(--text-dim)' }}>Message (optional)</label>
+          <textarea
+            rows={2}
+            maxLength={400}
+            placeholder="Short subtext shown under the title"
+            value={form.message}
+            onChange={e => setForm({ ...form, message: e.target.value })}
+            className="form-input resize-none"
+          />
+        </div>
+
+        {/* Media type */}
+        <div>
+          <label className="block text-[10px] sm:text-xs uppercase tracking-widest mb-2 font-semibold" style={{ color: 'var(--text-dim)' }}>Media Type</label>
+          <div className="grid grid-cols-2 gap-2">
+            <button type="button" onClick={() => setForm({ ...form, type: 'image' })}
+              className="p-2.5 text-xs uppercase tracking-wider font-semibold rounded-sm flex items-center justify-center gap-1.5 transition-colors"
+              style={form.type === 'image'
+                ? { background: 'var(--gold)', color: '#0A0A0A' }
+                : { background: 'rgba(128,128,128,0.12)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
+              <ImageIcon size={14} /> Image
+            </button>
+            <button type="button" onClick={() => setForm({ ...form, type: 'video' })}
+              className="p-2.5 text-xs uppercase tracking-wider font-semibold rounded-sm flex items-center justify-center gap-1.5 transition-colors"
+              style={form.type === 'video'
+                ? { background: 'var(--gold)', color: '#0A0A0A' }
+                : { background: 'rgba(128,128,128,0.12)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
+              <Video size={14} /> Video
+            </button>
+          </div>
+        </div>
+
+        {/* Effect (images only) */}
+        {form.type === 'image' && (
+          <div>
+            <label className="block text-[10px] sm:text-xs uppercase tracking-widest mb-2 font-semibold" style={{ color: 'var(--text-dim)' }}>Effect</label>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { id: 'none', label: 'None', icon: ImageIcon },
+                { id: 'fireworks', label: '🎆 Winner', icon: Sparkles },
+                { id: 'balloons', label: '🎈 Birthday', icon: Calendar },
+              ].map(opt => {
+                const Icon = opt.icon
+                return (
+                  <button key={opt.id} type="button" onClick={() => setForm({ ...form, effect: opt.id })}
+                    className="p-2.5 text-[11px] uppercase tracking-wider font-semibold rounded-sm flex flex-col items-center gap-1 transition-colors"
+                    style={form.effect === opt.id
+                      ? { background: 'var(--gold)', color: '#0A0A0A' }
+                      : { background: 'rgba(128,128,128,0.12)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
+                    <Icon size={15} />
+                    {opt.label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Upload */}
+        <div>
+          <label className="block text-[10px] sm:text-xs uppercase tracking-widest mb-2 font-semibold" style={{ color: 'var(--text-dim)' }}>
+            {form.type === 'video' ? 'Video File' : 'Image'}
+          </label>
+          <input
+            type="file"
+            accept={form.type === 'video' ? 'video/*' : 'image/*'}
+            onChange={uploadMedia}
+            disabled={uploading}
+            className="text-[10px] sm:text-xs mb-2 block w-full min-w-0 truncate"
+            style={{ color: 'var(--text-muted)' }}
+          />
+          <input
+            type="text"
+            placeholder="or paste URL"
+            value={form.mediaUrl}
+            onChange={e => setForm({ ...form, mediaUrl: e.target.value })}
+            className="form-input"
+          />
+          {form.mediaUrl && (
+            <div className="mt-2 rounded-sm overflow-hidden" style={{ background: 'var(--bg-elev)', border: '1px solid var(--border)' }}>
+              {form.type === 'video' ? (
+                <video src={form.mediaUrl} controls className="w-full max-h-48 object-contain bg-black" />
+              ) : (
+                <img src={form.mediaUrl} alt="preview" className="w-full max-h-48 object-contain" />
+              )}
+            </div>
+          )}
+          {uploading && <p className="text-[11px] gold-text mt-1">Uploading…</p>}
+        </div>
+
+        {/* Duration (images only) */}
+        {form.type === 'image' && (
+          <div>
+            <label className="block text-[10px] sm:text-xs uppercase tracking-widest mb-1.5 font-semibold" style={{ color: 'var(--text-dim)' }}>
+              <Timer size={11} className="inline mr-1" /> Auto-dismiss after ({form.durationSec} seconds)
+            </label>
+            <input
+              type="range"
+              min={3}
+              max={30}
+              step={1}
+              value={form.durationSec}
+              onChange={e => setForm({ ...form, durationSec: Number(e.target.value) })}
+              className="w-full accent-gold"
+            />
+            <div className="flex justify-between text-[10px]" style={{ color: 'var(--text-dim)' }}>
+              <span>3s</span><span>8s (default)</span><span>30s</span>
+            </div>
+          </div>
+        )}
+
+        {/* Schedule */}
+        <div className="p-3.5 rounded-sm space-y-3" style={{ background: 'var(--bg-elev)', border: '1px solid var(--border)' }}>
+          <p className="text-[10px] sm:text-xs uppercase tracking-widest font-semibold flex items-center gap-1.5" style={{ color: 'var(--text-dim)' }}>
+            <CalendarClock size={12} /> Schedule
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <div>
+              <label className="block text-[10px] mb-1" style={{ color: 'var(--text-dim)' }}>Starts at</label>
+              <input type="datetime-local" value={form.startsAt} onChange={e => setForm({ ...form, startsAt: e.target.value })} className="form-input text-sm" />
+              <p className="text-[10px] mt-1" style={{ color: 'var(--text-dim)' }}>Leave blank = show immediately</p>
+            </div>
+            <div>
+              <label className="block text-[10px] mb-1" style={{ color: 'var(--text-dim)' }}>Ends at</label>
+              <input type="datetime-local" value={form.endsAt} onChange={e => setForm({ ...form, endsAt: e.target.value })} className="form-input text-sm" />
+              <p className="text-[10px] mt-1" style={{ color: 'var(--text-dim)' }}>Leave blank = until disabled</p>
+            </div>
+          </div>
+          <label className="flex items-center gap-2.5 text-sm cursor-pointer" style={{ color: 'var(--text-muted)' }}>
+            <input type="checkbox" checked={form.active} onChange={e => setForm({ ...form, active: e.target.checked })} className="accent-gold w-4 h-4" />
+            <span>Active (visible to visitors)</span>
+          </label>
+          <label className="flex items-center gap-2.5 text-sm cursor-pointer" style={{ color: 'var(--text-muted)' }}>
+            <input type="checkbox" checked={form.showOncePerUser} onChange={e => setForm({ ...form, showOncePerUser: e.target.checked })} className="accent-gold w-4 h-4" />
+            <span>Show only once per visitor</span>
+          </label>
+        </div>
+
+        <div className="flex gap-2.5 pt-1">
+          <button type="submit" disabled={saving || uploading} className="btn-gold flex-1 disabled:opacity-60 text-xs sm:text-sm">
+            {saving ? 'Saving…' : (editing ? 'Update Pop-up' : 'Publish Pop-up')}
+          </button>
+          {editing && <button type="button" onClick={reset} className="btn-dark">Cancel</button>}
+        </div>
+      </form>
+
+      {/* === LIST === */}
+      <div className="lg:col-span-3 min-w-0">
+        <SectionTitle
+          icon={Megaphone}
+          title="Announcements"
+          count={announcements.length}
+          subtitle="Only one pop-up shows at a time — the most recently updated active one in its window."
+        />
+        {announcements.length === 0 ? (
+          <EmptyState message="No announcements yet. Create your first pop-up!" emoji="📢" />
+        ) : (
+          <div className="space-y-3">
+            {announcements.map(a => {
+              const status = getStatus(a)
+              return (
+                <div key={a.id} className="surface-card p-3.5 sm:p-4 rounded-sm flex flex-col sm:flex-row gap-3 sm:gap-4">
+                  {/* Thumbnail */}
+                  <div className="flex-shrink-0 w-full sm:w-32 h-24 sm:h-24 rounded-sm overflow-hidden flex items-center justify-center"
+                    style={{ background: '#000', border: '1px solid var(--border)' }}>
+                    {a.type === 'video' ? (
+                      <video src={a.mediaUrl} className="w-full h-full object-cover" muted />
+                    ) : (
+                      <img src={a.mediaUrl} alt="" className="w-full h-full object-cover" />
+                    )}
+                  </div>
+                  {/* Details */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2 flex-wrap">
+                      <div className="min-w-0">
+                        <p className="font-display uppercase text-sm sm:text-base truncate flex items-center gap-2 flex-wrap" style={{ color: 'var(--text)' }}>
+                          {a.title}
+                          <span className="text-[9px] sm:text-[10px] px-1.5 py-0.5 rounded-sm font-semibold uppercase tracking-wider"
+                            style={{ background: status.bg, color: status.color }}>
+                            {status.label}
+                          </span>
+                        </p>
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] sm:text-[11px] mt-1" style={{ color: 'var(--text-dim)' }}>
+                          <span className="inline-flex items-center gap-1">
+                            {a.type === 'video' ? <Video size={10} /> : <ImageIcon size={10} />}
+                            {a.type === 'video' ? 'Video' : 'Image'}
+                          </span>
+                          {a.effect !== 'none' && a.type === 'image' && (
+                            <span>
+                              · {a.effect === 'fireworks' ? '🎆 Fireworks' : '🎈 Balloons'}
+                            </span>
+                          )}
+                          {a.type === 'image' && <span>· {a.durationSec}s auto-dismiss</span>}
+                          {a.showOncePerUser && <span>· once per user</span>}
+                        </div>
+                      </div>
+                      {/* Active toggle */}
+                      <IoSSwitch on={!!a.active} onChange={() => toggleActive(a)} />
+                    </div>
+                    {a.message && (
+                      <p className="text-xs mt-1.5 line-clamp-2" style={{ color: 'var(--text-muted)' }}>{a.message}</p>
+                    )}
+                    <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 mt-2 text-[10px] sm:text-[11px]" style={{ color: 'var(--text-dim)' }}>
+                      <div className="flex items-center gap-1"><CalendarClock size={10} /> Starts: {formatDate(a.startsAt)}</div>
+                      <div className="flex items-center gap-1"><Clock size={10} /> Ends: {formatDate(a.endsAt)}</div>
+                      <div className="flex items-center gap-1"><Eye size={10} /> {a.views?.toLocaleString?.() || 0} views</div>
+                      <div className="flex items-center gap-1"><MousePointerClick size={10} /> {a.skips?.toLocaleString?.() || 0} skips</div>
+                    </div>
+                    <div className="flex items-center gap-2 mt-3 flex-wrap">
+                      <button onClick={() => startEdit(a)}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 text-[11px] uppercase tracking-wider font-semibold rounded-sm transition-colors"
+                        style={{ background: 'var(--gold-dim)', color: 'var(--gold)' }}>
+                        <Edit size={12} /> Edit
+                      </button>
+                      <button onClick={() => del(a)}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 text-[11px] uppercase tracking-wider font-semibold rounded-sm transition-colors hover:bg-red-500/10 text-red-400/70 hover:text-red-400">
+                        <Trash2 size={12} /> Delete
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

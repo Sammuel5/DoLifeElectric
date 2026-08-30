@@ -28,6 +28,63 @@
 'use strict';
 
 // ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+// Some libraries (notably nodemailer when given a misconfigured host, or
+// accidental calls that pass an email address like "user@gmail.com" instead
+// of a hostname) will call dns.resolve4/lookup() with a non-hostname string
+// (contains "@", or is not a valid hostname). Node throws EBADNAME which
+// can crash request handlers. Guard against that here by validating the
+// hostname before any DNS call goes out.
+function isValidHostname(name) {
+  if (typeof name !== 'string') return false;
+  if (!name) return false;
+  // Email addresses are never valid hostnames.
+  if (name.indexOf('@') !== -1) return false;
+  // Quick reject on obvious URL/path/scheme strings.
+  if (/^[a-z]+:\/\//i.test(name)) return false;
+  if (/[\s<>{}|\\^"'\[\]]/.test(name)) return false;
+  // RFC 1123-ish hostname check: labels separated by dots, each 1-63 chars,
+  // letters/digits/hyphen only, no leading/trailing hyphen.
+  // We also allow localhost and single-label names (e.g., "mongodb"),
+  // and IP literals.
+  if (name.length > 253) return false;
+  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(name)) return true; // IPv4
+  if (/:/.test(name)) return false; // IPv6 not handled here; reject colons for safety
+  const labels = name.split('.');
+  for (const lab of labels) {
+    if (!lab || lab.length > 63) return false;
+    if (!/^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?$/.test(lab)) return false;
+  }
+  return true;
+}
+
+// Wrap a dns function so that if called with an invalid hostname, it calls
+// back with an EBADNAME-style Error (synchronously via promise/callback)
+// instead of letting Node throw inside a Promise and crash the caller.
+function guardInvalidHost(fn, methodName) {
+  return function guarded(name /*, ...args */) {
+    if (!isValidHostname(name)) {
+      const err = new Error(`getaddrinfo ENOTFOUND ${String(name).slice(0, 120)} — not a valid hostname (called ${methodName} with "${String(name).slice(0, 80)}")`);
+      err.code = 'ENOTFOUND';
+      err.errno = -3008;
+      err.hostname = name;
+      err.syscall = 'getaddrinfo';
+      // Callback form: dns.resolve4(name, cb)
+      const lastArg = arguments[arguments.length - 1];
+      if (typeof lastArg === 'function') {
+        try { lastArg(err); } catch (_) {}
+        return;
+      }
+      // Promise form
+      return Promise.reject(err);
+    }
+    return fn.apply(this, arguments);
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Build the exports object. This ALWAYS runs (even when patch is already
 // applied) so webpack never sees an empty module.exports.
 // ---------------------------------------------------------------------------
@@ -38,9 +95,60 @@ let _mongoDnsLookup = undefined;
 let _ensureDnsWorks = function () { return true; };
 
 // Override with real implementations on Windows, ONCE per process.
+// The invalid-hostname guard (below) installs on ALL platforms because
+// EBADNAME crashes can also happen on Linux (Vercel) when a bad value is
+// accidentally passed to dns.lookup / dns.resolve4 (e.g. an email address).
 if (process.platform === 'win32' && !global.__dleDnsPatched) {
   global.__dleDnsPatched = true;
   installPatch();
+}
+
+// Platform-independent guard: prevents EBADNAME crashes when libraries
+// (nodemailer, auth libraries, etc.) accidentally pass an email address
+// or other non-hostname string into dns.lookup/resolve*.
+if (!global.__dleHostnameGuard) {
+  global.__dleHostnameGuard = true;
+  installHostnameGuard();
+}
+
+function installHostnameGuard() {
+  try {
+    const dns = require('dns');
+    // Guard dns.lookup
+    const origLookup = dns.lookup;
+    dns.lookup = function guardedLookup(hostname, options, callback) {
+      if (typeof options === 'function') { callback = options; options = {}; }
+      if (!isValidHostname(hostname)) {
+        const err = new Error(`getaddrinfo ENOTFOUND ${String(hostname).slice(0, 120)}`);
+        err.code = 'ENOTFOUND';
+        err.errno = -3008;
+        err.hostname = hostname;
+        err.syscall = 'getaddrinfo';
+        if (typeof callback === 'function') {
+          try { callback(err); } catch (_) {}
+          return;
+        }
+        return Promise.reject(err);
+      }
+      return origLookup.call(dns, hostname, options, callback);
+    };
+    // Guard resolve4 / resolve6 (these are what emit "queryA EBADNAME")
+    if (dns.resolve4) dns.resolve4 = guardInvalidHost(dns.resolve4.bind(dns), 'dns.resolve4');
+    if (dns.resolve6) dns.resolve6 = guardInvalidHost(dns.resolve6.bind(dns), 'dns.resolve6');
+    // Guard promise forms too
+    if (dns.promises) {
+      if (dns.promises.resolve4) dns.promises.resolve4 = guardInvalidHost(dns.promises.resolve4.bind(dns.promises), 'dns.promises.resolve4');
+      if (dns.promises.resolve6) dns.promises.resolve6 = guardInvalidHost(dns.promises.resolve6.bind(dns.promises), 'dns.promises.resolve6');
+      if (dns.promises.resolveSrv) dns.promises.resolveSrv = guardInvalidHost(dns.promises.resolveSrv.bind(dns.promises), 'dns.promises.resolveSrv');
+      if (dns.promises.resolveTxt) dns.promises.resolveTxt = guardInvalidHost(dns.promises.resolveTxt.bind(dns.promises), 'dns.promises.resolveTxt');
+      if (dns.promises.resolve) dns.promises.resolve = guardInvalidHost(dns.promises.resolve.bind(dns.promises), 'dns.promises.resolve');
+    }
+    if (dns.resolveSrv) dns.resolveSrv = guardInvalidHost(dns.resolveSrv.bind(dns), 'dns.resolveSrv');
+    if (dns.resolveTxt) dns.resolveTxt = guardInvalidHost(dns.resolveTxt.bind(dns), 'dns.resolveTxt');
+    if (dns.resolve) dns.resolve = guardInvalidHost(dns.resolve.bind(dns), 'dns.resolve');
+  } catch (_) {
+    // Non-Node runtime (Edge) — nothing to guard.
+  }
 }
 
 function installPatch() {
@@ -199,14 +307,45 @@ function installPatch() {
       return origP.call(dnsPromises, hostname, type);
     }
 
-    // Install synchronous patches immediately
-    dns.resolveSrv = patchedResolveSrv;
-    dns.resolveTxt = patchedResolveTxt;
-    dns.resolve    = patchedResolve;
+    // Install synchronous patches immediately (guarded against bad hostnames)
+    dns.resolveSrv = guardInvalidHost(patchedResolveSrv, 'dns.resolveSrv');
+    dns.resolveTxt = guardInvalidHost(patchedResolveTxt, 'dns.resolveTxt');
+    dns.resolve    = guardInvalidHost(patchedResolve, 'dns.resolve');
 
-    dnsPromises.resolveSrv = patchedPSrv;
-    dnsPromises.resolveTxt = patchedPTxt;
-    dnsPromises.resolve    = patchedP;
+    dnsPromises.resolveSrv = guardInvalidHost(patchedPSrv, 'dns.promises.resolveSrv');
+    dnsPromises.resolveTxt = guardInvalidHost(patchedPTxt, 'dns.promises.resolveTxt');
+    dnsPromises.resolve    = guardInvalidHost(patchedP,   'dns.promises.resolve');
+
+    // Also guard dns.lookup (called by Node's net.connect, mongo driver,
+    // nodemailer, etc.) so passing an email address never produces EBADNAME.
+    const origLookup = dns.lookup;
+    dns.lookup = function guardedLookup(hostname, options, callback) {
+      if (typeof options === 'function') { callback = options; options = {}; }
+      if (!isValidHostname(hostname)) {
+        const err = new Error(`getaddrinfo ENOTFOUND ${String(hostname).slice(0, 120)}`);
+        err.code = 'ENOTFOUND';
+        err.errno = -3008;
+        err.hostname = hostname;
+        err.syscall = 'getaddrinfo';
+        if (typeof callback === 'function') {
+          try { callback(err); } catch (_) {}
+          return;
+        }
+        return Promise.reject(err);
+      }
+      return origLookup.call(dns, hostname, options, callback);
+    };
+
+    // Also guard resolve4 / resolve6 explicitly because those are what
+    // produce "queryA EBADNAME" in Node's error messages.
+    const origResolve4 = dns.resolve4;
+    const origResolve6 = dns.resolve6;
+    if (origResolve4) dns.resolve4 = guardInvalidHost(origResolve4.bind(dns), 'dns.resolve4');
+    if (origResolve6) dns.resolve6 = guardInvalidHost(origResolve6.bind(dns), 'dns.resolve6');
+    const origPResolve4 = dnsPromises.resolve4;
+    const origPResolve6 = dnsPromises.resolve6;
+    if (origPResolve4) dnsPromises.resolve4 = guardInvalidHost(origPResolve4.bind(dnsPromises), 'dns.promises.resolve4');
+    if (origPResolve6) dnsPromises.resolve6 = guardInvalidHost(origPResolve6.bind(dnsPromises), 'dns.promises.resolve6');
 
     // ----- Layer (c): OS-resolver lookup for Mongo driver -----
     function mongoDnsLookup(hostname, options, callback) {

@@ -45,17 +45,17 @@ function isValidHostname(name) {
   // Quick reject on obvious URL/path/scheme strings.
   if (/^[a-z]+:\/\//i.test(name)) return false;
   if (/[\s<>{}|\\^"'\[\]]/.test(name)) return false;
-  // RFC 1123-ish hostname check: labels separated by dots, each 1-63 chars,
-  // letters/digits/hyphen only, no leading/trailing hyphen.
-  // We also allow localhost and single-label names (e.g., "mongodb"),
-  // and IP literals.
   if (name.length > 253) return false;
   if (/^\d{1,3}(\.\d{1,3}){3}$/.test(name)) return true; // IPv4
-  if (/:/.test(name)) return false; // IPv6 not handled here; reject colons for safety
+  if (/:/.test(name)) return false; // IPv6 / colons not handled here; reject
+  // DNS label check. DNS names technically only allow letters/digits/hyphens,
+  // BUT SRV/TXT records use underscores (_service._proto.example.com) which
+  // the DNS resolver legitimately needs to look up. So we also allow underscores.
   const labels = name.split('.');
   for (const lab of labels) {
     if (!lab || lab.length > 63) return false;
-    if (!/^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?$/.test(lab)) return false;
+    // Leading/trailing hyphens/underscores are fine for SRV labels.
+    if (!/^[a-zA-Z0-9_-]+$/.test(lab)) return false;
   }
   return true;
 }

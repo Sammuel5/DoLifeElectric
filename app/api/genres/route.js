@@ -13,7 +13,7 @@ function slugify(s) {
     .replace(/^-+|-+$/g, '')
 }
 
-// Public: list active genres with track counts
+// Public: list active genres with track counts and covers
 export async function GET() {
   try {
     await dbConnect()
@@ -21,10 +21,10 @@ export async function GET() {
 
     // Attach track counts for each genre
     const ids = genres.map(g => g._id)
-    const counts = await Music.aggregate([
+    const counts = ids.length > 0 ? await Music.aggregate([
       { $match: { active: true, genreId: { $in: ids } } },
       { $group: { _id: '$genreId', count: { $sum: 1 } } },
-    ])
+    ]) : []
     const countMap = new Map(counts.map(c => [c._id.toString(), c.count]))
 
     const payload = genres.map(g => ({
@@ -33,12 +33,14 @@ export async function GET() {
       slug: g.slug || slugify(g.name),
       description: g.description || '',
       color: g.color || '',
+      coverImage: g.coverImage || '',
       order: g.order || 0,
       trackCount: countMap.get(g._id.toString()) || 0,
     }))
 
     return NextResponse.json(payload)
   } catch (e) {
+    console.error('[genres GET] error:', e)
     return NextResponse.json([])
   }
 }
@@ -56,7 +58,7 @@ export async function POST(req) {
     }
 
     // Duplicate check (case-insensitive)
-    const escaped = data.name.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const escaped = data.name.trim().replace(/[.*+?^${}()|[\\]\\]/g, '\\$&')
     const existing = await Genre.findOne({
       name: { $regex: new RegExp(`^${escaped}$`, 'i') },
     })
@@ -72,6 +74,8 @@ export async function POST(req) {
       slug: data.slug || slugify(data.name),
       description: (data.description || '').trim(),
       color: (data.color || '').trim(),
+      coverImage: (data.coverImage || '').trim(),
+      coverPublicId: (data.coverPublicId || '').trim(),
       order: Number(data.order) || 0,
       active: data.active !== false,
     })

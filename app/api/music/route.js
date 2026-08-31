@@ -3,6 +3,7 @@ import { requirePermission } from '@/lib/auth'
 import dbConnect from '@/lib/dbConnect'
 import Music from '@/models/Music'
 import Genre from '@/models/Genre'
+import { decorateTrack } from '@/lib/covers'
 import mongoose from 'mongoose'
 export const dynamic = 'force-dynamic'
 
@@ -21,8 +22,17 @@ export async function GET(req) {
     const gid = sanitizeObjectId(genreId)
     if (gid) filter.genreId = gid
     const tracks = await Music.find(filter).sort({ order: 1, createdAt: -1 })
-    return NextResponse.json(tracks)
+    const genreIds = new Set()
+    tracks.forEach(t => { if (t.genreId) genreIds.add(String(t.genreId)) })
+    let genreMap = new Map()
+    if (genreIds.size > 0) {
+      const genres = await Genre.find({ _id: { $in: Array.from(genreIds) } }).lean()
+      genreMap = new Map(genres.map(g => [String(g._id), g]))
+    }
+    const out = tracks.map(t => decorateTrack(t, genreMap))
+    return NextResponse.json(out)
   } catch (e) {
+    console.error('[music GET] error:', e)
     return NextResponse.json([])
   }
 }
@@ -39,18 +49,20 @@ export async function POST(req) {
 
     if (!data.artistName || data.artistName.trim() === '') data.artistName = 'DLE Entertainment'
 
-    // Resolve genre
     data.genreId = sanitizeObjectId(data.genreId)
+    let genreDoc = null
     if (data.genreId) {
       const g = await Genre.findById(data.genreId)
       data.genreName = g ? g.name : ''
       if (!g) data.genreId = null
+      else genreDoc = g
     } else {
       data.genreName = ''
     }
 
     const track = await Music.create(data)
-    return NextResponse.json(track)
+    const out = decorateTrack(track, genreDoc ? new Map([[String(genreDoc._id), genreDoc.toObject ? genreDoc.toObject() : genreDoc]]) : new Map())
+    return NextResponse.json(out)
   } catch (e) {
     return NextResponse.json({ error: e.message || 'Failed to save track' }, { status: 500 })
   }

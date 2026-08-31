@@ -23,10 +23,12 @@ export async function POST(req) {
 
     // Map folder to required permission. `announcements` folder uses the
     // `announcements` permission (granted in Admin schema below).
+    // `genres` folder (genre cover images) uses the `music` permission.
     const folderPermMap = {
       audio: 'music',
       images: 'artists',
       videos: 'artists',
+      genres: 'music',
       announcements: 'announcements',
     }
     const perm = folderPermMap[folder] || 'artists'
@@ -42,6 +44,7 @@ export async function POST(req) {
       images: 10 * 1024 * 1024,
       audio: 50 * 1024 * 1024,
       videos: 100 * 1024 * 1024,
+      genres: 10 * 1024 * 1024, // genre cover images (10MB)
       announcements: 20 * 1024 * 1024, // 20MB — covers large posters + short videos
     }
     const maxSize = maxSizes[folder] || 10 * 1024 * 1024
@@ -84,6 +87,7 @@ export async function POST(req) {
       images:         ['.jpg', '.jpeg', '.png', '.webp', '.gif'],
       audio:          ['.mp3', '.wav', '.ogg', '.m4a', '.aac', '.flac'],
       videos:         ['.mp4', '.webm', '.mov', '.m4v'],
+      genres:         ['.jpg', '.jpeg', '.png', '.webp', '.gif'], // genre cover images
       announcements:  ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.mp4', '.webm', '.mov'],
     }
     const allowed = allowedExts[folder] || allowedExts.images
@@ -96,7 +100,8 @@ export async function POST(req) {
     const mime = (file.type || '').toLowerCase()
     const isVideo = folder === 'videos' || (folder === 'announcements' && mime.startsWith('video/')) || ['.mp4', '.webm', '.mov', '.m4v'].includes(ext)
     const isAudio = folder === 'audio'
-    const isImage = !isVideo && !isAudio && mime.startsWith('image/')
+    // Genres folder is always images
+    const isImage = !isVideo && !isAudio && (folder === 'images' || folder === 'genres' || mime.startsWith('image/'))
     const mimeOk =
       (isImage && mime.startsWith('image/') && mime !== 'image/svg+xml') ||
       (isAudio && mime.startsWith('audio/')) ||
@@ -110,7 +115,15 @@ export async function POST(req) {
       try {
         // Pick the correct Cloudinary resource folder based on file content
         const cloudFolder = isVideo ? 'videos' : isAudio ? 'audio' : 'images'
-        const cloudSub = folder === 'announcements' ? 'announcements' : (subfolder || '')
+        // Compute subfolder:
+        //   - announcements → announcements
+        //   - genres → genres (genre cover images live in dle/images/genres/)
+        //   - audio/images with an explicit subfolder (genre name) → use it
+        //     (e.g. audio → dle/audio/Hip-Hop/...  images → dle/images/Hip-Hop/...)
+        let cloudSub = ''
+        if (folder === 'announcements') cloudSub = 'announcements'
+        else if (folder === 'genres') cloudSub = 'genres'
+        else if (subfolder) cloudSub = subfolder
         const result = await uploadToCloudinary(buffer, {
           folder: cloudFolder,
           subfolder: cloudSub,
@@ -136,9 +149,12 @@ export async function POST(req) {
     // ---------------- LOCAL PATH (dev / fallback) ----------------
     const filename = `${Date.now()}-${baseName}${ext}`
 
+    // Genres folder gets its own top-level uploads/genres/ dir.
+    // If a subfolder (genre name) is provided, nest under it (e.g. uploads/audio/Hip-Hop/).
+    const localFolder = folder === 'genres' ? 'genres' : folder
     const targetFolder = subfolder
-      ? path.join(process.cwd(), 'public', 'uploads', folder, subfolder)
-      : path.join(process.cwd(), 'public', 'uploads', folder)
+      ? path.join(process.cwd(), 'public', 'uploads', localFolder, subfolder)
+      : path.join(process.cwd(), 'public', 'uploads', localFolder)
 
     const uploadsRoot = path.join(process.cwd(), 'public', 'uploads')
     const resolved = path.resolve(targetFolder)
@@ -165,8 +181,8 @@ export async function POST(req) {
     }
 
     const publicUrl = subfolder
-      ? `/uploads/${folder}/${subfolder}/${filename}`
-      : `/uploads/${folder}/${filename}`
+      ? `/uploads/${localFolder}/${subfolder}/${filename}`
+      : `/uploads/${localFolder}/${filename}`
     console.log(`[upload] Local success: ${publicUrl} (${buffer.length} bytes) by ${auth.session.user.email}`)
     return NextResponse.json({
       url: publicUrl,

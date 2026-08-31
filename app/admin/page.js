@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
+import { DEFAULT_TRACK_COVER } from '@/lib/covers'
 
 /* =========================================================================
    DLE Admin Dashboard — Cinematic, professional, theme-aware.
@@ -1103,16 +1104,26 @@ const uploadFile = async (e, field) => {
 /* =========================================================================
    MUSIC MANAGER
    ========================================================================= */
+// Clean a name for use as a filesystem/Cloudinary folder (no slashes, no dots, no weird chars).
+function toFolderName(name) {
+  return String(name || '').trim().replace(/[\\/]/g, '-').replace(/\.+/g, '-').replace(/[^a-zA-Z0-9_\- .]/g, '_').replace(/\s+/g, ' ').slice(0, 60)
+}
+
 function MusicManager({ tracks, genres, onRefresh }) {
-  const [form, setForm] = useState({ title: '', artistName: '', audioUrl: '', coverImage: '', album: '', genreId: '' })
+  const [form, setForm] = useState({ title: '', artistName: '', audioUrl: '', audioPublicId: '', coverImage: '', coverPublicId: '', album: '', genreId: '' })
   const [editing, setEditing] = useState(null)
   const [saving, setSaving] = useState(false)
   const [query, setQuery] = useState('')
   const [genreFilter, setGenreFilter] = useState('all')
+  const [uploadingAudio, setUploadingAudio] = useState(false)
+  const [uploadingCover, setUploadingCover] = useState(false)
+  const [uploadingGenreCover, setUploadingGenreCover] = useState(null) // genreId being uploaded to
 
   // Genre manager state
   const [showGenres, setShowGenres] = useState(false)
   const [newGenreName, setNewGenreName] = useState('')
+  const [newGenreCover, setNewGenreCover] = useState('')
+  const [newGenreCoverPublicId, setNewGenreCoverPublicId] = useState('')
   const [addingGenre, setAddingGenre] = useState(false)
   const [editingGenre, setEditingGenre] = useState(null)
   const [editGenreName, setEditGenreName] = useState('')
@@ -1141,14 +1152,19 @@ function MusicManager({ tracks, genres, onRefresh }) {
     })
   }, [genres])
 
-  const reset = () => { setForm({ title: '', artistName: '', audioUrl: '', coverImage: '', album: '', genreId: '' }); setEditing(null) }
+  const reset = () => {
+    setForm({ title: '', artistName: '', audioUrl: '', audioPublicId: '', coverImage: '', coverPublicId: '', album: '', genreId: '' })
+    setEditing(null)
+  }
   const startEdit = t => {
     setEditing(t)
     setForm({
       title: t.title || '',
       artistName: t.artistName || '',
       audioUrl: t.audioUrl || '',
+      audioPublicId: t.audioPublicId || '',
       coverImage: t.coverImage || '',
+      coverPublicId: t.coverPublicId || '',
       album: t.album || '',
       genreId: t.genreId ? String(t.genreId) : '',
     })
@@ -1166,7 +1182,9 @@ function MusicManager({ tracks, genres, onRefresh }) {
         title: form.title.trim(),
         artistName: form.artistName.trim(),
         audioUrl: form.audioUrl,
+        audioPublicId: form.audioPublicId || '',
         coverImage: form.coverImage,
+        coverPublicId: form.coverPublicId || '',
         album: form.album.trim(),
         genreId: form.genreId || null,
         artistId: null,
@@ -1190,11 +1208,86 @@ function MusicManager({ tracks, genres, onRefresh }) {
 
   const uploadFile = async (e, field, folder) => {
     const file = e.target.files?.[0]; if (!file) return
-    const fd = new FormData(); fd.append('file', file); fd.append('folder', folder)
-    const res = await fetch('/api/upload', { method: 'POST', body: fd })
-    const d = await res.json()
-    if (d.url) { setForm({ ...form, [field]: d.url }); toast.success('Uploaded!') }
-    else toast.error(d.error || 'Upload failed')
+    // Set loading state for the specific media type
+    if (field === 'audioUrl') setUploadingAudio(true)
+    if (field === 'coverImage') setUploadingCover(true)
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      fd.append('folder', folder)
+      // Organize audio & track cover images into a subfolder named after the selected genre
+      // (e.g. audio/Hip-Hop/song.mp3  and  images/Hip-Hop/cover.jpg)
+      if ((folder === 'audio' || folder === 'images') && form.genreId) {
+        const g = sortedGenres.find(x => String(x._id) === String(form.genreId))
+        if (g?.name) {
+          const sub = toFolderName(g.name)
+          if (sub) fd.append('subfolder', sub)
+        }
+      }
+      const res = await fetch('/api/upload', { method: 'POST', body: fd })
+      const d = await res.json()
+      if (d.url) {
+        setForm(prev => ({
+          ...prev,
+          [field]: d.url,
+          // Save Cloudinary public IDs for cleanup later
+          ...(field === 'audioUrl' ? { audioPublicId: d.public_id || '' } : {}),
+          ...(field === 'coverImage' ? { coverPublicId: d.public_id || '' } : {}),
+        }))
+        toast.success('Uploaded!')
+      } else {
+        toast.error(d.error || 'Upload failed')
+      }
+    } catch (err) {
+      toast.error(err.message || 'Upload failed')
+    } finally {
+      if (field === 'audioUrl') setUploadingAudio(false)
+      if (field === 'coverImage') setUploadingCover(false)
+      // Reset the file input so selecting the same file twice still triggers onChange
+      e.target.value = ''
+    }
+  }
+
+  // Upload for GENRE covers (saves directly to the genre record, subfolder = genre name)
+  const uploadGenreCover = async (e, genre) => {
+    const file = e.target.files?.[0]; if (!file) return
+    setUploadingGenreCover(genre._id)
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      fd.append('folder', 'genres')
+      const sub = toFolderName(genre.name)
+      if (sub) fd.append('subfolder', sub)
+      const res = await fetch('/api/upload', { method: 'POST', body: fd })
+      const d = await res.json()
+      if (d.url) {
+        const up = await fetch(`/api/genres/${genre._id}`, {
+          method: 'PUT', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ coverImage: d.url, coverPublicId: d.public_id || '' }),
+        })
+        if (up.ok) { toast.success('Genre cover updated!'); onRefresh() }
+        else { const dd = await up.json().catch(() => ({})); toast.error(dd.error || 'Failed to save genre cover') }
+      } else {
+        toast.error(d.error || 'Upload failed')
+      }
+    } catch (err) { toast.error(err.message) }
+    finally {
+      setUploadingGenreCover(null)
+      e.target.value = ''
+    }
+  }
+
+  const removeGenreCover = async (g) => {
+    if (!g.coverImage) return
+    if (!confirm(`Remove cover for genre "${g.name}"?`)) return
+    try {
+      const res = await fetch(`/api/genres/${g._id}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ coverImage: '', coverPublicId: '' }),
+      })
+      if (res.ok) { toast.success('Genre cover removed'); onRefresh() }
+      else toast.error('Failed to remove cover')
+    } catch (err) { toast.error(err.message) }
   }
 
   // --- Genre CRUD helpers ---
@@ -1207,13 +1300,40 @@ function MusicManager({ tracks, genres, onRefresh }) {
       const res = await fetch('/api/genres', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name }),
+        body: JSON.stringify({ name, coverImage: newGenreCover, coverPublicId: newGenreCoverPublicId }),
       })
       const d = await res.json().catch(() => ({}))
-      if (res.ok) { toast.success(`Genre "${name}" added`); setNewGenreName(''); onRefresh() }
+      if (res.ok) {
+        toast.success(`Genre "${name}" added`)
+        setNewGenreName('')
+        setNewGenreCover('')
+        setNewGenreCoverPublicId('')
+        onRefresh()
+      }
       else toast.error(d.error || 'Failed to add genre')
     } catch (err) { toast.error(err.message) }
     setAddingGenre(false)
+  }
+
+  // Upload cover for a NEW genre being created (before save)
+  const uploadNewGenreCover = async (e) => {
+    const file = e.target.files?.[0]; if (!file) return
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      fd.append('folder', 'genres')
+      // New genre doesn't have an ID yet — use the typed name as subfolder
+      const sub = toFolderName(newGenreName || 'new-genre')
+      if (sub) fd.append('subfolder', sub)
+      const res = await fetch('/api/upload', { method: 'POST', body: fd })
+      const d = await res.json()
+      if (d.url) {
+        setNewGenreCover(d.url)
+        setNewGenreCoverPublicId(d.public_id || '')
+        toast.success('Cover uploaded!')
+      } else { toast.error(d.error || 'Upload failed') }
+    } catch (err) { toast.error(err.message) }
+    e.target.value = ''
   }
 
   const startEditGenre = (g) => { setEditingGenre(g); setEditGenreName(g.name) }
@@ -1278,91 +1398,121 @@ function MusicManager({ tracks, genres, onRefresh }) {
               Create genres here (e.g. <em>Hip-Hop, R&B, OPM, Pop</em>), then assign them to tracks below.
               Genres show up as clickable pills on the public Music page.
             </p>
-            <form onSubmit={addGenre} className="flex flex-col sm:flex-row gap-2">
-              <input
-                type="text"
-                placeholder="New genre name..."
-                value={newGenreName}
-                onChange={e => setNewGenreName(e.target.value)}
-                className="form-input flex-1"
-              />
-              <button
-                type="submit"
-                disabled={addingGenre}
-                className="btn-gold px-4 inline-flex items-center justify-center gap-1.5 disabled:opacity-60 text-xs sm:text-sm whitespace-nowrap"
-              >
-                <Plus size={14} /> {addingGenre ? 'Adding…' : 'Add Genre'}
-              </button>
+            <form onSubmit={addGenre} className="space-y-3">
+              <div className="flex flex-col sm:flex-row gap-2">
+                <input
+                  type="text"
+                  placeholder="New genre name..."
+                  value={newGenreName}
+                  onChange={e => setNewGenreName(e.target.value)}
+                  className="form-input flex-1"
+                />
+                <button
+                  type="submit"
+                  disabled={addingGenre}
+                  className="btn-gold px-4 inline-flex items-center justify-center gap-1.5 disabled:opacity-60 text-xs sm:text-sm whitespace-nowrap"
+                >
+                  <Plus size={14} /> {addingGenre ? 'Adding…' : 'Add Genre'}
+                </button>
+              </div>
+              <div className="flex items-center gap-3 p-2.5 rounded-sm" style={{ background: 'var(--bg-elev)', border: '1px solid var(--border)' }}>
+                <img
+                  src={newGenreCover || DEFAULT_TRACK_COVER}
+                  alt=""
+                  className="w-12 h-12 rounded-sm object-cover flex-shrink-0"
+                  style={{ border: '1px solid var(--border)' }}
+                />
+                <div className="flex-1 min-w-0">
+                  <label className="block text-[10px] uppercase tracking-widest mb-1 font-semibold" style={{ color: 'var(--text-dim)' }}>Genre Cover (optional)</label>
+                  <input type="file" accept="image/*" onChange={uploadNewGenreCover} className="text-[10px] sm:text-xs block w-full min-w-0 truncate" style={{ color: 'var(--text-muted)' }} />
+                </div>
+                {newGenreCover && (
+                  <button type="button" onClick={() => { setNewGenreCover(''); setNewGenreCoverPublicId('') }}
+                    className="text-[10px] uppercase tracking-widest px-2 py-1 rounded-sm hover:bg-red-500/10 text-red-400/70 hover:text-red-400 flex-shrink-0">
+                    Clear
+                  </button>
+                )}
+              </div>
             </form>
             {sortedGenres.length === 0 ? (
               <p className="text-xs italic py-3 text-center" style={{ color: 'var(--text-dim)' }}>
                 No genres yet. Add one above to categorize your music.
               </p>
             ) : (
-              <div className="flex flex-wrap gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {sortedGenres.map(g => (
                   <div
                     key={g._id}
-                    className="inline-flex items-center gap-1.5 pl-3 pr-1 py-1 rounded-full text-xs"
+                    className="flex items-center gap-2.5 p-2 rounded-sm"
                     style={{ background: 'var(--bg-elev)', border: '1px solid var(--border)' }}
                   >
-                    {editingGenre && editingGenre._id === g._id ? (
-                      <>
-                        <input
-                          autoFocus
-                          value={editGenreName}
-                          onChange={e => setEditGenreName(e.target.value)}
-                          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); saveGenre() } if (e.key === 'Escape') cancelEditGenre() }}
-                          className="bg-transparent outline-none text-sm min-w-[80px]"
-                          style={{ color: 'var(--text)' }}
-                        />
-                        <button
-                          type="button"
-                          onClick={saveGenre}
-                          className="p-1 text-emerald-400 hover:text-emerald-300"
-                          title="Save"
-                        >
-                          <Check size={13} />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={cancelEditGenre}
-                          className="p-1 hover:text-white"
-                          style={{ color: 'var(--text-muted)' }}
-                          title="Cancel"
-                        >
-                          <X size={13} />
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <Tag size={11} className="gold-text" />
-                        <span className="font-semibold" style={{ color: 'var(--text)' }}>{g.name}</span>
-                        <span
-                          className="text-[10px] px-1.5 py-0.5 rounded-full"
-                          style={{ background: 'var(--gold-dim)', color: 'var(--gold)' }}
-                        >
-                          {g.trackCount || 0}
+                    {/* Cover */}
+                    <div className="relative flex-shrink-0 group">
+                      <img
+                        src={g.coverImage || DEFAULT_TRACK_COVER}
+                        alt=""
+                        className="w-11 h-11 rounded-sm object-cover"
+                        style={{ border: '1px solid var(--border)', background: 'var(--bg-card)' }}
+                      />
+                      <label
+                        className="absolute inset-0 rounded-sm cursor-pointer flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                        style={{ background: 'rgba(0,0,0,0.7)' }}
+                        title={g.coverImage ? 'Change cover' : 'Upload cover'}
+                      >
+                        <UploadIcon size={13} className="text-white" />
+                        <input type="file" accept="image/*" className="hidden" disabled={uploadingGenreCover === g._id}
+                          onChange={e => uploadGenreCover(e, g)} />
+                      </label>
+                    </div>
+                    {/* Name + editing */}
+                    <div className="flex-1 min-w-0">
+                      {editingGenre && editingGenre._id === g._id ? (
+                        <div className="flex items-center gap-1">
+                          <input
+                            autoFocus
+                            value={editGenreName}
+                            onChange={e => setEditGenreName(e.target.value)}
+                            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); saveGenre() } if (e.key === 'Escape') cancelEditGenre() }}
+                            className="bg-transparent outline-none text-sm flex-1 min-w-0"
+                            style={{ color: 'var(--text)', borderBottom: '1px solid var(--gold)' }}
+                          />
+                          <button type="button" onClick={saveGenre} className="p-1 text-emerald-400 hover:text-emerald-300" title="Save"><Check size={13} /></button>
+                          <button type="button" onClick={cancelEditGenre} className="p-1 hover:text-white" style={{ color: 'var(--text-muted)' }} title="Cancel"><X size={13} /></button>
+                        </div>
+                      ) : (
+                        <p className="font-semibold text-sm truncate" style={{ color: 'var(--text)' }}>
+                          <Tag size={10} className="gold-text inline mr-1" />{g.name}
+                        </p>
+                      )}
+                      <div className="flex items-center gap-2 mt-0.5 text-[10px]" style={{ color: 'var(--text-dim)' }}>
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full font-semibold" style={{ background: 'var(--gold-dim)', color: 'var(--gold)' }}>
+                          {g.trackCount || 0} track{g.trackCount === 1 ? '' : 's'}
                         </span>
-                        <button
-                          type="button"
-                          onClick={() => startEditGenre(g)}
-                          className="p-1 rounded-full hover:bg-white/10 transition-colors"
-                          style={{ color: 'var(--text-muted)' }}
-                          title="Rename"
-                        >
+                        <span>
+                          {g.coverImage ? '🎨 cover set' : 'no cover (uses DLE logo)'}
+                        </span>
+                        {uploadingGenreCover === g._id && <span className="text-gold">uploading…</span>}
+                      </div>
+                    </div>
+                    {/* Actions */}
+                    <div className="flex items-center gap-0.5 flex-shrink-0">
+                      {g.coverImage && (
+                        <button type="button" onClick={() => removeGenreCover(g)}
+                          className="p-1.5 rounded-sm hover:bg-red-500/10 text-red-400/60 hover:text-red-400" title="Remove cover">
+                          <X size={12} />
+                        </button>
+                      )}
+                      {!(editingGenre && editingGenre._id === g._id) && (
+                        <button type="button" onClick={() => startEditGenre(g)}
+                          className="p-1.5 rounded-sm hover:bg-white/10" style={{ color: 'var(--text-muted)' }} title="Rename">
                           <Edit size={12} />
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => deleteGenre(g)}
-                          className="p-1 rounded-full hover:bg-red-500/20 text-red-400/60 hover:text-red-400 transition-colors"
-                          title="Delete"
-                        >
-                          <Trash2 size={12} />
-                        </button>
-                      </>
-                    )}
+                      )}
+                      <button type="button" onClick={() => deleteGenre(g)}
+                        className="p-1.5 rounded-sm hover:bg-red-500/20 text-red-400/60 hover:text-red-400" title="Delete genre">
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1406,20 +1556,54 @@ function MusicManager({ tracks, genres, onRefresh }) {
             )}
           </div>
           <div>
-            <label className="block text-[10px] sm:text-xs uppercase tracking-widest mb-2 font-semibold" style={{ color: 'var(--text-dim)' }}>Audio File (MP3/WAV) {editing ? '(leave empty to keep current)' : '*'}</label>
-            <input type="file" accept="audio/*" onChange={e => uploadFile(e, 'audioUrl', 'audio')} className="text-[10px] sm:text-xs mb-2 block w-full min-w-0 truncate" style={{ color: 'var(--text-muted)' }} />
+            <label className="block text-[10px] sm:text-xs uppercase tracking-widest mb-2 font-semibold" style={{ color: 'var(--text-dim)' }}>
+              Audio File (MP3/WAV) {editing ? '(leave empty to keep current)' : '*'}
+              {form.genreId && sortedGenres.find(g => String(g._id) === String(form.genreId))?.name && (
+                <span className="ml-2 normal-case tracking-normal font-normal text-emerald-400">
+                  → will save in folder: <strong>{sortedGenres.find(g => String(g._id) === String(form.genreId)).name}</strong>
+                </span>
+              )}
+            </label>
+            <input type="file" accept="audio/*" disabled={uploadingAudio} onChange={e => uploadFile(e, 'audioUrl', 'audio')} className="text-[10px] sm:text-xs mb-2 block w-full min-w-0 truncate" style={{ color: 'var(--text-muted)' }} />
             <input placeholder="or paste URL to MP3" value={form.audioUrl} onChange={e => setForm({...form, audioUrl: e.target.value})} className="form-input" />
             {form.audioUrl && (
               <div className="mt-2 p-2.5 rounded-sm" style={{ background: 'var(--bg-elev)', border: '1px solid var(--border)' }}>
                 <audio src={form.audioUrl} controls className="w-full max-w-full h-8" style={{maxWidth:"100%"}} />
-                <p className="text-emerald-400 text-xs mt-1.5 flex items-center gap-1">✓ Audio ready</p>
+                <p className="text-emerald-400 text-xs mt-1.5 flex items-center gap-1">✓ Audio ready{uploadingAudio && ' (uploading…)'}</p>
               </div>
             )}
+            {uploadingAudio && !form.audioUrl && <p className="text-[11px] gold-text mt-1">Uploading audio…</p>}
           </div>
           <div>
-            <label className="block text-[10px] sm:text-xs uppercase tracking-widest mb-2 font-semibold" style={{ color: 'var(--text-dim)' }}>Cover Image</label>
-            <input type="file" accept="image/*" onChange={e => uploadFile(e, 'coverImage', 'images')} className="text-[10px] sm:text-xs mb-2 block w-full min-w-0 truncate" style={{ color: 'var(--text-muted)' }} />
+            <label className="block text-[10px] sm:text-xs uppercase tracking-widest mb-2 font-semibold" style={{ color: 'var(--text-dim)' }}>
+              Cover Image
+              <span className="ml-2 normal-case tracking-normal font-normal" style={{ color: 'var(--text-dim)' }}>
+                (optional — if left blank, uses the genre cover or DLE logo)
+              </span>
+            </label>
+            <input type="file" accept="image/*" disabled={uploadingCover} onChange={e => uploadFile(e, 'coverImage', 'images')} className="text-[10px] sm:text-xs mb-2 block w-full min-w-0 truncate" style={{ color: 'var(--text-muted)' }} />
             <input placeholder="or paste URL" value={form.coverImage} onChange={e => setForm({...form, coverImage: e.target.value})} className="form-input" />
+            <div className="mt-2 flex items-center gap-3">
+              <img
+                src={form.coverImage || DEFAULT_TRACK_COVER}
+                alt="cover preview"
+                className="w-16 h-16 rounded-sm object-cover flex-shrink-0"
+                style={{ border: '1px solid var(--border)', background: 'var(--bg-elev)' }}
+              />
+              <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
+                {form.coverImage
+                  ? 'Custom cover for this track.'
+                  : (form.genreId && sortedGenres.find(g => String(g._id) === String(form.genreId))?.coverImage
+                      ? <>Using <strong style={{ color: 'var(--gold)' }}>{sortedGenres.find(g => String(g._id) === String(form.genreId)).name}</strong> genre cover.</>
+                      : 'No cover set — DLE logo will be used.')}
+              </p>
+              {form.coverImage && (
+                <button type="button" onClick={() => setForm({ ...form, coverImage: '', coverPublicId: '' })}
+                  className="ml-auto text-[10px] uppercase tracking-widest px-2 py-1 rounded-sm hover:bg-red-500/10 text-red-400/70 hover:text-red-400">
+                  Clear
+                </button>
+              )}
+            </div>
           </div>
           <div className="flex gap-2.5 pt-2">
             <button type="submit" disabled={saving || (!editing && !form.audioUrl)} className="btn-gold flex-1 disabled:opacity-60 text-xs sm:text-sm">
@@ -1466,11 +1650,11 @@ function MusicManager({ tracks, genres, onRefresh }) {
 
           <div className="space-y-2 max-h-[640px] overflow-y-auto pr-1">
             {filtered.length === 0 && <EmptyState message={query || genreFilter !== 'all' ? 'No tracks match your filters.' : 'No tracks yet. Upload one to get started.'} emoji="🎵" />}
-            {filtered.map(t => (
+            {filtered.map(t => {
+              const effectiveCover = t.coverImage || t.genreCover || t.effectiveCover || DEFAULT_TRACK_COVER
+              return (
               <div key={t._id} className={`flex items-center gap-2.5 sm:gap-3 p-2.5 sm:p-3.5 min-w-0 rounded-sm transition-colors surface-card ${isEditing(t._id) ? 'ring-1 ring-gold/40' : ''}`}>
-                {t.coverImage
-                  ? <img src={t.coverImage} className="w-11 h-11 sm:w-12 sm:h-12 object-cover flex-shrink-0 rounded-sm" style={{ border: '1px solid var(--border)' }} />
-                  : <div className="w-11 h-11 sm:w-12 sm:h-12 flex items-center justify-center flex-shrink-0 rounded-sm gold-text text-xl" style={{ background: 'var(--bg-elev)', border: '1px solid var(--border)' }}>♪</div>}
+                <img src={effectiveCover} className="w-11 h-11 sm:w-12 sm:h-12 object-cover flex-shrink-0 rounded-sm" style={{ border: '1px solid var(--border)', background: 'var(--bg-elev)' }} onError={(e) => { e.currentTarget.src = DEFAULT_TRACK_COVER }} />
                 <div className="flex-1 min-w-0">
                   <p className="font-display uppercase truncate text-sm sm:text-base flex items-center gap-1.5 flex-wrap" style={{ color: 'var(--text)' }}>
                     {t.title}
@@ -1489,7 +1673,8 @@ function MusicManager({ tracks, genres, onRefresh }) {
                 <button onClick={() => startEdit(t)} className="p-1.5 sm:p-2 flex-shrink-0 rounded-sm transition-colors hover:bg-[var(--gold-dim)]" style={{ color: 'var(--text-muted)' }} title="Edit"><Edit size={15} /></button>
                 <button onClick={() => del(t._id)} className="p-1.5 sm:p-2 flex-shrink-0 rounded-sm transition-colors hover:bg-red-500/10 text-red-400/60 hover:text-red-400" title="Delete"><Trash2 size={15} /></button>
               </div>
-            ))}
+              )
+            })}
           </div>
         </div>
       </div>

@@ -3,14 +3,14 @@ import Link from 'next/link'
 import { useEffect, useState } from 'react'
 
 const ASSET = {
-  hero: '/uploads/images/home/AboutPage/DLE_Web Asset_Hero Image_No text.png',
-  bare: '/uploads/images/home/AboutPage/DLE_Web Asset_Bare BG.png',
-  kd: '/uploads/images/home/AboutPage/DLE_Web Asset_KD.png',
-  storm: '/uploads/images/home/AboutPage/DLE_Web Asset_Storm.png',
-  xbound: '/uploads/images/home/AboutPage/DLE_Web Asset_X-Bound.png',
-  anghel: '/uploads/images/home/AboutPage/DLE_Web Asset_Anghel.png',
-  section2Bg: '/uploads/images/home/AboutPage/DLE_Web_Section2_BG.png',
-  logoSm: '/dlelogo/dle-logo-sm.png',
+  hero: '/uploads/images/home/AboutPage/DLE_Web Asset_Hero Image_No text.webp',
+  bare: '/uploads/images/home/AboutPage/DLE_Web Asset_Bare BG.webp',
+  kd: '/uploads/images/home/AboutPage/DLE_Web Asset_KD.webp',
+  storm: '/uploads/images/home/AboutPage/DLE_Web Asset_Storm.webp',
+  xbound: '/uploads/images/home/AboutPage/DLE_Web Asset_X-Bound.webp',
+  anghel: '/uploads/images/home/AboutPage/DLE_Web Asset_Anghel.webp',
+  section2Bg: '/uploads/images/home/AboutPage/DLE_Web_Section2_BG.webp',
+  logoSm: '/dlelogo/dle-logo-sm.webp',
 }
 
 function scrollToId(id) {
@@ -600,7 +600,7 @@ export default function AboutPage() {
                   className="absolute text-white/80 leading-[1.85] text-right"
                   style={{
                     left: '4%',
-                    top: '52%',
+                    top: '42%',
                     transform: 'translateY(-50%)',
                     maxWidth: '340px',
                     width: 'calc(100% - 80px)',

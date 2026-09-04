@@ -12,7 +12,7 @@ export default function PrivacyPage() {
 
       <h2 className="font-display text-xl uppercase mt-8" style={{ color: 'var(--text)' }}>2. How We Use Information</h2>
       <ul className="mt-2 list-disc pl-5 space-y-1" style={{ color: 'var(--text-muted)' }}>
-        <li>Process donations and deliver fan support to artists</li>
+        <li>Process Gifts and deliver fan support to artists</li>
         <li>Send receipts and transaction confirmations</li>
         <li>Respond to contact form inquiries</li>
         <li>Prevent fraud and secure our platform</li>

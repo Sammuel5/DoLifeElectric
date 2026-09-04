@@ -73,7 +73,7 @@ function HeroBackgroundVideo() {
         loop
         playsInline
         preload={shouldPreloadAuto ? 'auto' : 'metadata'}
-        poster="/uploads/images/home/video-poster.jpg"
+        poster="/uploads/images/home/video-poster.webp"
         onError={() => setVideoReady(false)}
         onPlay={() => setIsPlaying(true)}
         onPause={() => setIsPlaying(false)}
@@ -253,7 +253,7 @@ function HomeContent() {
             <div className="flex flex-col items-center text-center w-full relative z-20">
               {/* Shield logo */}
               <img
-                src="/dlelogo/dle-logo-sm.png"
+                src="/dlelogo/dle-logo-sm.webp"
                 alt="DLE"
                 className="w-[85px] sm:w-[105px] h-auto"
                 style={{ filter: 'drop-shadow(0 8px 24px rgba(0,0,0,0.55))' }}
@@ -289,7 +289,7 @@ function HomeContent() {
                   className="font-display font-bold uppercase gold-text -mt-0.5"
                   style={{
                     fontSize: 'clamp(52px, 14vw, 86px)',
-                    lineHeight: 0.85,
+                    lineHeight: 0.95,
                     letterSpacing: '0.02em',
                     textShadow: '0 6px 24px rgba(0,0,0,0.6)',
                   }}
@@ -329,7 +329,7 @@ function HomeContent() {
           {/* Mobile/tablet artist — smaller, bottom-right, head just under the OUR STORY button */}
           <div className="lg:hidden absolute inset-x-0 bottom-0 z-[5] pointer-events-none flex items-end justify-end">
             <img
-              src="/uploads/images/home/hero-artist.png"
+              src="/uploads/images/home/hero-artist.webp"
               alt="DLE Artist"
               className="block w-auto"
               style={{
@@ -349,7 +349,7 @@ function HomeContent() {
           >
             <div className="flex flex-col items-start text-left max-w-2xl">
               <div className="flex flex-col items-center w-full">
-                <img src="/dlelogo/dle-logo-sm.png" alt="DLE" className="w-[240px] h-auto"
+                <img src="/dlelogo/dle-logo-sm.webp" alt="DLE" className="w-[240px] h-auto"
                   style={{ filter: 'drop-shadow(0 8px 24px rgba(0,0,0,0.55))' }} />
                 <div className="mt-3 mb-10 flex flex-col items-center">
                   <p className="font-display font-semibold text-white/90 text-sm text-center"
@@ -368,7 +368,7 @@ function HomeContent() {
                   Redifining <span className="italic">The</span>
                 </p>
                 <h1 className="font-display font-bold uppercase tracking-[0.04em] -mt-2 gold-text text-left"
-                  style={{ fontSize: 'clamp(88px, 10.5vw, 160px)', lineHeight: 0.85, textShadow: '0 6px 24px rgba(0,0,0,0.6)' }}>
+                  style={{ fontSize: 'clamp(88px, 10.5vw, 160px)', lineHeight: 0.95, textShadow: '0 6px 24px rgba(0,0,0,0.6)' }}>
                   VISION
                 </h1>
               </div>
@@ -386,7 +386,7 @@ function HomeContent() {
           {/* Desktop artist (right side) */}
           <div className="hidden lg:block absolute right-0 bottom-0 z-20 pointer-events-none">
             <img
-              src="/uploads/images/home/hero-artist.png"
+              src="/uploads/images/home/hero-artist.webp"
               alt="DLE Artist"
               className="block w-auto"
               style={{
@@ -424,7 +424,7 @@ function HomeContent() {
           className="pointer-events-none absolute left-1/2 top-0 -translate-x-1/2 opacity-[0.05]"
           aria-hidden="true"
         >
-          <img src="/dlelogo/dle-logo-sm.png" alt="" className="w-[700px] max-w-none select-none" />
+          <img src="/dlelogo/dle-logo-sm.webp" alt="" className="w-[700px] max-w-none select-none" />
         </div>
         {/* Grain/texture overlay */}
         <div
@@ -659,7 +659,7 @@ function HomeContent() {
       >
         {/* Background image (bronze grunge + music notes) */}
         <img
-          src="/uploads/images/home/music-cta-bg.png"
+          src="/uploads/images/home/music-cta-bg.webp"
           alt=""
           aria-hidden="true"
           className="absolute inset-0 w-full h-full object-cover select-none"
@@ -769,7 +769,7 @@ function HomeContent() {
           >
             {/* Background fills entire section */}
             <img
-              src="/uploads/images/home/contact-hand-bg.png"
+              src="/uploads/images/home/contact-hand-bg.webp"
               alt=""
               aria-hidden="true"
               className="absolute inset-0 w-full h-full object-cover"
@@ -879,7 +879,7 @@ function HomeContent() {
                     /* ======== SIGNED-OUT VIEW ======== */
                     <>
                       <img
-                        src="/uploads/images/home/lock-icon.png"
+                        src="/uploads/images/home/lock-icon.webp"
                         alt=""
                         aria-hidden="true"
                         className="w-11 h-11 md:w-12 md:h-12 mb-3 opacity-95"

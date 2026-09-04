@@ -15,7 +15,7 @@ export default function Footer() {
           <div className="md:col-span-1">
             <Link href="/" className="inline-block mb-4 group">
               <img
-                src="/dlelogo/dle-logo-sm.png"
+                src="/dlelogo/dle-logo-sm.webp"
                 alt="DLE Entertainment"
                 className="h-12 w-auto object-contain transition-transform group-hover:scale-105"
               />

@@ -16,7 +16,7 @@ function LoginContent() {
   return (
     <div className="min-h-[70vh] flex items-center justify-center px-4 py-20">
       <div className="max-w-md w-full surface-card p-8 md:p-10 text-center rounded-sm">
-        <img src="/dlelogo/dle-logo-sm.png" alt="DLE Entertainment" className="h-16 mx-auto mb-6 object-contain" />
+        <img src="/dlelogo/dle-logo-sm.webp" alt="DLE Entertainment" className="h-16 mx-auto mb-6 object-contain" />
         <h1 className="font-display text-3xl uppercase mb-2" style={{ color: 'var(--text)' }}>Sign In</h1>
         <p className="text-sm mb-8" style={{ color: 'var(--text-muted)' }}>
           Sign in with Google to securely send gifts and support artists.

@@ -201,7 +201,7 @@ export default function Navbar() {
         {/* Left: shield logo */}
         <Link href="/" aria-label="DLE Home"
           className="lg:hidden flex items-center pointer-events-auto transition-transform hover:scale-[1.05] active:scale-[0.97]">
-          <img src="/dlelogo/dle-logo-sm.png" alt="DLE Entertainment"
+          <img src="/dlelogo/dle-logo-sm.webp" alt="DLE Entertainment"
             className="h-[34px] sm:h-[40px] w-auto object-contain block"
             style={{
               filter: isDark
@@ -270,7 +270,7 @@ export default function Navbar() {
         {/* CENTER LOGO (desktop only) */}
         <Link href="/" aria-label="DLE Home"
           className="hidden lg:block absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 pointer-events-auto transition-transform hover:scale-[1.05] active:scale-[0.97]">
-          <img src="/dlelogo/dle-logo-sm.png" alt="DLE Entertainment"
+          <img src="/dlelogo/dle-logo-sm.webp" alt="DLE Entertainment"
             className="h-[60px] xl:h-[68px] w-auto object-contain"
             style={{ filter: isDark ? 'drop-shadow(0 4px 10px rgba(0,0,0,0.55))' : 'drop-shadow(0 2px 6px rgba(138,117,48,0.25))' }} />
         </Link>
@@ -424,7 +424,7 @@ export default function Navbar() {
 
           {/* Small DLE logo top */}
           <div className={`relative pt-8 pb-6 px-6 flex flex-col items-center border-b ${isDark ? 'border-gold/20' : 'border-[#E5DFD1]'}`}>
-            <img src="/dlelogo/dle-logo-sm.png" alt="" className="h-[58px] w-auto object-contain"
+            <img src="/dlelogo/dle-logo-sm.webp" alt="" className="h-[58px] w-auto object-contain"
               style={{
                 filter: isDark
                   ? 'drop-shadow(0 4px 10px rgba(0,0,0,0.55))'

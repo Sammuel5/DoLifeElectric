@@ -1,6 +1,7 @@
 'use client'
 import { createContext, useContext, useState, useRef, useEffect, useCallback } from 'react'
 import { useSession, signIn } from 'next-auth/react'
+import { DEFAULT_TRACK_COVER } from '@/lib/covers'
 
 // ==============================================================
 // SPOTIFY-STYLE MUSIC PLAYER
@@ -306,6 +307,71 @@ export function fmtTime(s) {
   return `${m}:${sec}`
 }
 
+// Resolve the best cover for a track:
+//   1. explicit track cover (coverImage)
+//   2. genre-wide cover (effectiveCover — sent from /api/music)
+//   3. DLE logo default (DEFAULT_TRACK_COVER from /lib/covers)
+export function coverOf(track) {
+  if (!track) return DEFAULT_TRACK_COVER
+  return track.coverImage || track.effectiveCover || track.genreCover || DEFAULT_TRACK_COVER
+}
+
+// Group tracks into GENRE buckets (one card per genre).
+// Genres with a cover use that cover; genres without fall back to DEFAULT_TRACK_COVER.
+// Tracks without a genre go into an "Uncategorized" bucket.
+export function groupByGenre(tracks, genres = []) {
+  const genreMap = new Map()
+  // index genres by id for fast lookup
+  genres.forEach(g => genreMap.set(String(g._id), g))
+
+  const buckets = new Map()
+  tracks.forEach(t => {
+    const gid = t.genreId ? String(t.genreId) : ''
+    let key, name, cover, artist, isGenre
+    if (gid && genreMap.has(gid)) {
+      const g = genreMap.get(gid)
+      key = gid
+      name = g.name
+      cover = g.coverImage || coverOf(t)
+      artist = `${g.name} · DLE Roster`
+      isGenre = true
+    } else {
+      key = '__uncategorized__'
+      name = 'Uncategorized'
+      cover = coverOf(t)
+      artist = 'DLE Entertainment'
+      isGenre = false
+    }
+    if (!buckets.has(key)) {
+      buckets.set(key, {
+        name,
+        cover,
+        artist,
+        tracks: [],
+        year: null,
+        isGenre,
+      })
+    }
+    const entry = buckets.get(key)
+    entry.tracks.push(t)
+    // Upgrade cover if first track had a default and this one has something better
+    const c = coverOf(t)
+    if ((!entry.cover || entry.cover === DEFAULT_TRACK_COVER) && c && c !== DEFAULT_TRACK_COVER) {
+      entry.cover = c
+    }
+  })
+
+  // Sort: genres by name, Uncategorized at the end
+  const list = Array.from(buckets.values())
+  list.sort((a, b) => {
+    if (a.name === 'Uncategorized') return 1
+    if (b.name === 'Uncategorized') return -1
+    return a.name.localeCompare(b.name)
+  })
+  // If only Uncategorized exists and has tracks, still show it
+  return list
+}
+
 // Group tracks into album buckets (one card per album)
 export function groupByAlbum(tracks) {
   const map = new Map()
@@ -317,23 +383,27 @@ export function groupByAlbum(tracks) {
     } else {
       if (!map.has(key)) map.set(key, {
         name: key,
-        cover: t.coverImage || '',
+        cover: coverOf(t),
         artist: t.artistName || 'DLE Entertainment',
         tracks: [],
         year: t.createdAt ? new Date(t.createdAt).getFullYear() : null,
       })
       const entry = map.get(key)
       entry.tracks.push(t)
-      if (!entry.cover && t.coverImage) entry.cover = t.coverImage
+      // Use first-available cover
+      const c = coverOf(t)
+      if ((!entry.cover || entry.cover === DEFAULT_TRACK_COVER) && c && c !== DEFAULT_TRACK_COVER) entry.cover = c
       const y = t.createdAt ? new Date(t.createdAt).getFullYear() : null
       if (y && !entry.year) entry.year = y
     }
   })
   const albums = Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name))
   if (singles.length) {
+    // Find the first single that has a non-default cover; else default logo
+    const singlesCover = singles.map(coverOf).find(c => c && c !== DEFAULT_TRACK_COVER) || DEFAULT_TRACK_COVER
     albums.push({
       name: 'Singles',
-      cover: singles[0].coverImage || '',
+      cover: singlesCover,
       artist: 'Various Artists',
       tracks: singles,
       year: null,
@@ -355,10 +425,10 @@ function TrackArtwork({ track, size = 'md' }) {
   }
   return (
     <div className={`${sizes[size]} flex-shrink-0 bg-dark-light overflow-hidden`}>
-      {track?.coverImage ? (
-        <img src={track.coverImage} alt={track.title} className="w-full h-full object-cover" loading="lazy" />
+      {track && coverOf(track) && coverOf(track) !== DEFAULT_TRACK_COVER ? (
+        <img src={coverOf(track)} alt={track.title} className="w-full h-full object-cover" loading="lazy" />
       ) : (
-        <div className="w-full h-full flex items-center justify-center gold-text font-display text-2xl">♪</div>
+        <img src={DEFAULT_TRACK_COVER} alt="" className="w-full h-full object-contain p-2 opacity-70" loading="lazy" />
       )}
     </div>
   )
@@ -459,10 +529,10 @@ export function AlbumCard({ album, onClick }) {
       className="w-40 sm:w-44 md:w-48 text-left group bg-dark-card hover:bg-white/10 p-3 rounded-md transition-all duration-200 active:scale-[0.97]"
     >
       <div className="relative w-full aspect-square bg-dark-light overflow-hidden shadow-lg mb-3">
-        {album.cover ? (
+        {album.cover && album.cover !== DEFAULT_TRACK_COVER ? (
           <img src={album.cover} alt={album.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" />
         ) : (
-          <div className="w-full h-full flex items-center justify-center gold-text font-display text-5xl">♪</div>
+          <img src={DEFAULT_TRACK_COVER} alt="" className="w-full h-full object-contain p-6 opacity-70" loading="lazy" />
         )}
         <div className="absolute bottom-2 right-2 w-11 h-11 rounded-full bg-gold text-dark flex items-center justify-center shadow-xl opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200">
           <PlayIcon size={18} className="ml-0.5" />
@@ -484,7 +554,7 @@ export function AlbumHero({ album, onPlay, onShufflePlay, isPlayingThisAlbum }) 
       <div
         className="absolute inset-0 opacity-60"
         style={{
-          background: album.cover
+          background: album.cover && album.cover !== DEFAULT_TRACK_COVER
             ? `linear-gradient(to bottom, rgba(20,20,20,0) 0%, #0f0f0f 100%), url(${album.cover}) center/cover no-repeat`
             : 'linear-gradient(to bottom, #C9A84C 0%, #0f0f0f 100%)',
           filter: 'blur(20px)',
@@ -496,15 +566,15 @@ export function AlbumHero({ album, onPlay, onShufflePlay, isPlayingThisAlbum }) 
       <div className="relative w-full sm:hidden px-4 pt-6 pb-4 bg-gradient-to-b from-transparent via-dark-card/60 to-dark-card">
         <div className="flex flex-col items-center justify-center w-full">
           <div className="w-44 h-44 bg-dark-light shadow-2xl overflow-hidden mx-auto">
-            {album.cover ? (
+            {album.cover && album.cover !== DEFAULT_TRACK_COVER ? (
               <img src={album.cover} alt={album.name} className="w-full h-full object-cover shadow-2xl" />
             ) : (
-              <div className="w-full h-full flex items-center justify-center gold-text font-display text-6xl">♪</div>
+              <img src={DEFAULT_TRACK_COVER} alt="" className="w-full h-full object-contain p-6 opacity-80" />
             )}
           </div>
           <div className="w-full text-center mt-5">
             <p className="text-[10px] font-bold uppercase tracking-widest text-white/80 mb-1">
-              {album.isSingles ? 'Collection' : 'Album'}
+              {album.isSingles ? 'Collection' : album.isGenre ? 'Genre' : 'Album'}
             </p>
             <h1 className="font-display text-3xl font-black text-white leading-none break-words">
               {album.name}
@@ -522,15 +592,15 @@ export function AlbumHero({ album, onPlay, onShufflePlay, isPlayingThisAlbum }) 
       <div className="hidden sm:block relative sm:pt-0 px-4 sm:px-6 md:px-8 pb-4 bg-gradient-to-b from-transparent via-dark-card/60 to-dark-card">
         <div className="flex flex-row items-end gap-7 max-w-5xl mx-auto">
           <div className="w-48 h-48 md:w-56 md:h-56 flex-shrink-0 bg-dark-light shadow-2xl overflow-hidden">
-            {album.cover ? (
+            {album.cover && album.cover !== DEFAULT_TRACK_COVER ? (
               <img src={album.cover} alt={album.name} className="w-full h-full object-cover shadow-2xl" />
             ) : (
-              <div className="w-full h-full flex items-center justify-center gold-text font-display text-6xl">♪</div>
+              <img src={DEFAULT_TRACK_COVER} alt="" className="w-full h-full object-contain p-8 opacity-80" />
             )}
           </div>
           <div className="flex-1 min-w-0 text-left pb-2">
             <p className="text-xs font-bold uppercase tracking-widest text-white/80 mb-2">
-              {album.isSingles ? 'Collection' : 'Album'}
+              {album.isSingles ? 'Collection' : album.isGenre ? 'Genre' : 'Album'}
             </p>
             <h1 className="font-display text-4xl md:text-6xl font-black text-white leading-none mb-4 break-words">
               {album.name}
@@ -600,11 +670,7 @@ export function MiniPlayer() {
         <div className="flex items-center gap-2 sm:gap-3 h-16 sm:h-20 px-2 sm:px-4">
           <button onClick={() => setFullScreen(true)} className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0 hover:bg-white/5 rounded p-1 text-left active:scale-[0.98]">
             <div className="w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0 bg-dark-light overflow-hidden">
-              {current.coverImage ? (
-                <img src={current.coverImage} alt={current.title} className="w-full h-full object-cover" loading="lazy" />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center gold-text text-lg">♪</div>
-              )}
+              <img src={coverOf(current)} alt={current.title} className="w-full h-full object-cover" loading="lazy" />
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-white text-xs sm:text-sm font-medium truncate">{current.title}</p>
@@ -638,7 +704,7 @@ export function FullScreenPlayer({ onClose }) {
   return (
     <div className="fixed inset-0 z-50 flex flex-col overflow-hidden safe-top safe-bottom"
       style={{
-        background: current.coverImage
+        background: coverOf(current) && coverOf(current) !== DEFAULT_TRACK_COVER
           ? 'linear-gradient(to bottom, rgba(60,45,15,0.95) 0%, #1a1208 40%, #0a0a0a 100%)'
           : 'linear-gradient(to bottom, #2a220e 0%, #0a0a0a 100%)'
       }}
@@ -660,11 +726,7 @@ export function FullScreenPlayer({ onClose }) {
       {/* Cover */}
       <div className="flex-1 flex items-center justify-center px-6 sm:px-10 py-4 min-h-0">
         <div className={`w-full max-w-sm aspect-square shadow-2xl overflow-hidden transition-transform duration-300 ${playing ? '' : 'scale-95 opacity-95'}`}>
-          {current.coverImage ? (
-            <img src={current.coverImage} alt={current.title} className="w-full h-full object-cover" />
-          ) : (
-            <div className="w-full h-full bg-dark-light flex items-center justify-center gold-text font-display text-8xl">♪</div>
-          )}
+          <img src={coverOf(current)} alt={current.title} className="w-full h-full object-cover" />
         </div>
       </div>
 

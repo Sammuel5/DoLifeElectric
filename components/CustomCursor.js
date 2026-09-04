@@ -239,7 +239,7 @@ export default function CustomCursor() {
         }}
       >
         <img
-          src="/dlelogo/dle-logo-sm.png"
+          src="/dlelogo/dle-logo-sm.webp"
           alt=""
           draggable="false"
           className="dle-cursor-logo"

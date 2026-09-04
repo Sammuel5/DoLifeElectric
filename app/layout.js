@@ -43,7 +43,7 @@ export default function RootLayout({ children }) {
         <link rel="dns-prefetch" href="https://accounts.google.com" />
 
         {/* Preload the small DLE logo so it appears immediately in the hero. */}
-        <link rel="preload" as="image" href="/dlelogo/dle-logo-sm.png" fetchPriority="high" />
+        <link rel="preload" as="image" href="/dlelogo/dle-logo-sm.webp" fetchPriority="high" />
       </head>
       <body
         className={`${inter.className} flex flex-col`}

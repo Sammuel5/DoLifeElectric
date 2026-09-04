@@ -149,7 +149,7 @@ export default function ArtistsPage() {
     >
       {/* DLE watermark */}
       <div className="pointer-events-none absolute left-1/2 top-0 -translate-x-1/2 opacity-[0.05] z-0" aria-hidden="true">
-        <img src="/dlelogo/dle-logo-sm.png" alt="" className="w-[700px] max-w-none select-none" />
+        <img src="/dlelogo/dle-logo-sm.webp" alt="" className="w-[700px] max-w-none select-none" />
       </div>
       {/* Noise */}
       <div

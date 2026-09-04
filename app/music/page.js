@@ -5,6 +5,7 @@ import { useSession, signIn } from 'next-auth/react'
 import {
   usePlayer,
   groupByAlbum,
+  groupByGenre,
   AlbumCard,
   AlbumHero,
   TrackRow,
@@ -45,7 +46,12 @@ export default function MusicPage() {
     })
   }, [tracks, activeGenre])
 
-  const albums = useMemo(() => groupByAlbum(genreFilteredTracks), [genreFilteredTracks])
+  // In "All" view, group by GENRE (each genre becomes an album-style card).
+  // When a specific genre is selected, fall back to album grouping within it.
+  const albums = useMemo(() => {
+    if (activeGenre === 'all') return groupByGenre(genreFilteredTracks, genres)
+    return groupByAlbum(genreFilteredTracks)
+  }, [genreFilteredTracks, activeGenre, genres])
 
   // Filter albums/songs by search
   const filteredAlbums = useMemo(() => {
@@ -122,7 +128,7 @@ export default function MusicPage() {
               Our <span className="gold-text">Music</span>
             </h1>
             <p className="text-white/50 text-sm md:text-base">
-              Pick a genre, then an album — tap any song to play.
+              Pick a genre to explore — tap any card or song to play.
             </p>
           </div>
 
@@ -244,15 +250,22 @@ export default function MusicPage() {
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6 justify-items-start">
-              {filteredAlbums.map(album => (
-                <AlbumCard
-                  key={album.name}
-                  album={album}
-                  onClick={(a) => setActiveAlbum(a)}
-                />
-              ))}
-            </div>
+            <>
+              {activeGenre === 'all' && (
+                <p className="text-white/50 text-xs uppercase tracking-widest mb-4">
+                  {filteredAlbums.length} genre{filteredAlbums.length !== 1 ? 's' : ''} · tap a card to play all tracks in that genre
+                </p>
+              )}
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6 justify-items-start">
+                {filteredAlbums.map(album => (
+                  <AlbumCard
+                    key={album.name + (album.isGenre ? '-g' : '-a')}
+                    album={album}
+                    onClick={(a) => setActiveAlbum(a)}
+                  />
+                ))}
+              </div>
+            </>
           )}
         </div>
       )}

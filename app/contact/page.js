@@ -69,7 +69,7 @@ export default function ContactPage() {
       {/* Giant faded DLE shield watermark in center */}
       <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 opacity-[0.07] z-0">
         <img
-          src="/dlelogo/dle-logo-sm.png"
+          src="/dlelogo/dle-logo-sm.webp"
           alt=""
           className="w-[520px] md:w-[720px] lg:w-[900px] max-w-none select-none"
         />
@@ -78,7 +78,7 @@ export default function ContactPage() {
       {/* LEFT dancer: faded ghost duplicate behind (mobile: smaller/less opacity) */}
       <div className="pointer-events-none absolute left-0 top-1/2 -translate-y-[52%] z-[1] opacity-[0.08] md:opacity-[0.18] block">
         <img
-          src="/uploads/images/home/contact-dancer-left.png"
+          src="/uploads/images/home/contact-dancer-left.webp"
           alt=""
           className="h-[38vh] sm:h-[50vh] md:h-[70vh] lg:h-[80vh] w-auto object-contain -translate-x-[20%] sm:-translate-x-[15%] md:-translate-x-[10%] scale-x-[-1]"
          loading="lazy" decoding="async" />
@@ -86,7 +86,7 @@ export default function ContactPage() {
       {/* LEFT dancer: foreground (smaller; on mobile tucked closer to edge) */}
       <div className="pointer-events-none absolute left-0 bottom-0 z-[3] block">
         <img
-          src="/uploads/images/home/contact-dancer-left.png"
+          src="/uploads/images/home/contact-dancer-left.webp"
           alt=""
           className="h-[30vh] sm:h-[45vh] md:h-[62vh] lg:h-[72vh] w-auto object-contain"
           style={{
@@ -101,7 +101,7 @@ export default function ContactPage() {
       {/* RIGHT dancer: faded ghost duplicate behind */}
       <div className="pointer-events-none absolute right-0 top-1/2 -translate-y-[52%] z-[1] opacity-[0.08] md:opacity-[0.18] block">
         <img
-          src="/uploads/images/home/contact-dancer-right.png"
+          src="/uploads/images/home/contact-dancer-right.webp"
           alt=""
           className="h-[38vh] sm:h-[50vh] md:h-[70vh] lg:h-[80vh] w-auto object-contain translate-x-[20%] sm:translate-x-[15%] md:translate-x-[10%]"
          loading="lazy" decoding="async" />
@@ -109,7 +109,7 @@ export default function ContactPage() {
       {/* RIGHT dancer: foreground (smaller; on mobile tucked closer to edge) */}
       <div className="pointer-events-none absolute right-0 bottom-0 z-[3] block">
         <img
-          src="/uploads/images/home/contact-dancer-right.png"
+          src="/uploads/images/home/contact-dancer-right.webp"
           alt=""
           className="h-[30vh] sm:h-[45vh] md:h-[62vh] lg:h-[72vh] w-auto object-contain"
           style={{
@@ -176,7 +176,7 @@ export default function ContactPage() {
         <div className="text-white/85 text-sm md:text-base leading-snug max-w-md text-center space-y-2 mb-8 md:mb-10 px-4"
              style={{ textShadow: '0 2px 10px rgba(0,0,0,0.7)' }}>
           <p>For business inquiries, artist submissions, or fan support questions — sign in and send us a message using the form, or email us directly.</p>
-          <p>For urgent donation/refund issues, please include your PayMongo reference number in your message.</p>
+          <p>For urgent Gifts/refund issues, please include your PayMongo reference number in your message.</p>
         </div>
 
         {/* Sign-in / Form card */}
@@ -192,7 +192,7 @@ export default function ContactPage() {
           >
             {/* Lock icon */}
             <img
-              src="/uploads/images/home/lock-icon.png"
+              src="/uploads/images/home/lock-icon.webp"
               alt=""
               aria-hidden="true"
               className="w-14 h-14 md:w-16 md:h-16 mb-3 md:mb-4 opacity-95"

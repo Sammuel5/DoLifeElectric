@@ -3,6 +3,7 @@ import { requirePermission } from '@/lib/auth'
 import dbConnect from '@/lib/dbConnect'
 import Genre from '@/models/Genre'
 import Music from '@/models/Music'
+import { thumbUrl } from '@/lib/covers'
 export const dynamic = 'force-dynamic'
 
 function slugify(s) {
@@ -17,7 +18,11 @@ function slugify(s) {
 export async function GET() {
   try {
     await dbConnect()
-    const genres = await Genre.find({ active: true }).sort({ order: 1, name: 1 })
+    // Project only fields we need so the response stays small at high genre counts.
+    const genres = await Genre.find(
+      { active: true },
+      { name: 1, slug: 1, description: 1, color: 1, coverImage: 1, order: 1 }
+    ).sort({ order: 1, name: 1 }).lean()
 
     // Attach track counts for each genre
     const ids = genres.map(g => g._id)
@@ -33,12 +38,21 @@ export async function GET() {
       slug: g.slug || slugify(g.name),
       description: g.description || '',
       color: g.color || '',
-      coverImage: g.coverImage || '',
+      // Optimize Cloudinary cover to a 200px thumb (smaller = faster)
+      coverImage: g.coverImage ? thumbUrl(g.coverImage) : '',
       order: g.order || 0,
       trackCount: countMap.get(g._id.toString()) || 0,
     }))
 
-    return NextResponse.json(payload)
+    // 60-second CDN/browser cache with stale-while-revalidate so repeat page
+    // views don't re-query MongoDB on every navigation — genres rarely change.
+    return new NextResponse(JSON.stringify(payload), {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300',
+      },
+    })
   } catch (e) {
     console.error('[genres GET] error:', e)
     return NextResponse.json([])

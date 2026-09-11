@@ -27,9 +27,13 @@ export default function MusicPage() {
 
   useEffect(() => {
     setLoading(true)
+    // Use the browser's HTTP cache — our /api/music and /api/genres endpoints
+    // return Cache-Control: s-maxage=60, stale-while-revalidate=300 so repeat
+    // visits / Back button / tab refocus loads instantly instead of waiting
+    // on MongoDB + Cloudinary every time.
     Promise.all([
-      fetch('/api/music').then(r => r.json()).catch(() => []),
-      fetch('/api/genres').then(r => r.json()).catch(() => []),
+      fetch('/api/music', { cache: 'force-cache' }).then(r => r.json()).catch(() => []),
+      fetch('/api/genres', { cache: 'force-cache' }).then(r => r.json()).catch(() => []),
     ]).then(([t, g]) => {
       setTracks(Array.isArray(t) ? t : [])
       setGenres(Array.isArray(g) ? g : [])

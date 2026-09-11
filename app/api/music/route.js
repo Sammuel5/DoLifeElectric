@@ -5,7 +5,10 @@ import Music from '@/models/Music'
 import Genre from '@/models/Genre'
 import { decorateTrack, LIST_PROJECTION, thumbUrl, optimizeCloudinaryUrl } from '@/lib/covers'
 import mongoose from 'mongoose'
-export const dynamic = 'force-dynamic'
+// ISR cache: first visitor hits DB, next 60 seconds of visitors worldwide get
+// cached response from Vercel Edge CDN (~50ms). 5-minute stale-while-revalidate
+// means even if DB is slow/unreachable, users still see the track list.
+export const revalidate = 60
 
 function sanitizeObjectId(id) {
   if (!id || id === '' || id === 'undefined' || id === 'null') return null

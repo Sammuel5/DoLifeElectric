@@ -4,7 +4,15 @@ export default function ArtistCard({ artist, onClick }) {
   return (
     <div className="artist-card group aspect-[3/4] bg-dark-light relative overflow-hidden cursor-pointer" onClick={onClick}>
       {artist.image ? (
-        <img src={artist.image} alt={artist.name} className="w-full h-full object-cover" loading="lazy" />
+        <img
+          src={artist.image}
+          alt=""
+          className="w-full h-full object-cover"
+          loading="lazy"
+          decoding="async"
+          width={400}
+          height={533}
+        />
       ) : (
         <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-dark-light to-dark text-white/30 font-display text-4xl sm:text-5xl">
           {artist.name?.[0] || '?'}

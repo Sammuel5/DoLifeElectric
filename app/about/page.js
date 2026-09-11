@@ -600,7 +600,7 @@ export default function AboutPage() {
                   className="absolute text-white/80 leading-[1.85] text-right"
                   style={{
                     left: '4%',
-                    top: '42%',
+                    top: '52%',
                     transform: 'translateY(-50%)',
                     maxWidth: '340px',
                     width: 'calc(100% - 80px)',

@@ -4,7 +4,7 @@ import dbConnect from '@/lib/dbConnect'
 import Genre from '@/models/Genre'
 import Music from '@/models/Music'
 import { thumbUrl } from '@/lib/covers'
-export const dynamic = 'force-dynamic'
+export const revalidate = 60
 
 function slugify(s) {
   return (s || '')

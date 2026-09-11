@@ -176,7 +176,7 @@ export default function ContactPage() {
         <div className="text-white/85 text-sm md:text-base leading-snug max-w-md text-center space-y-2 mb-8 md:mb-10 px-4"
              style={{ textShadow: '0 2px 10px rgba(0,0,0,0.7)' }}>
           <p>For business inquiries, artist submissions, or fan support questions — sign in and send us a message using the form, or email us directly.</p>
-          <p>For urgent Gifts/refund issues, please include your PayMongo reference number in your message.</p>
+          <p>For urgent donation/refund issues, please include your PayMongo reference number in your message.</p>
         </div>
 
         {/* Sign-in / Form card */}

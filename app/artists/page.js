@@ -18,9 +18,12 @@ function TalentCard({ artist, onClick }) {
       {artist.image ? (
         <img
           src={artist.image}
-          alt={artist.name}
+          alt=""
           className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
           loading="lazy"
+          decoding="async"
+          width={400}
+          height={533}
         />
       ) : (
         <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-[#1a1610] to-[#0A0806] text-white/30 font-display text-5xl">
@@ -67,7 +70,9 @@ export default function ArtistsPage() {
   const [filter, setFilter] = useState('all') // 'all' | 'group' | 'solo'
 
   useEffect(() => {
-    fetch('/api/artists')
+    // Use browser HTTP cache so Back button / new tab / revisits load
+    // instantly. Server sets Cache-Control: s-maxage=60, stale-while-revalidate=300.
+    fetch('/api/artists', { cache: 'force-cache' })
       .then(r => r.json())
       .then(data => { setArtists(Array.isArray(data) ? data : []); setLoading(false) })
       .catch(() => setLoading(false))

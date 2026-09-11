@@ -121,9 +121,12 @@ function TalentCard({ artist, onClick, featured }) {
       {artist.image ? (
         <img
           src={artist.image}
-          alt={artist.name}
+          alt=""
           className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
           loading="lazy"
+          decoding="async"
+          width={400}
+          height={533}
         />
       ) : (
         <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-[#1a1610] to-[#0A0806] text-white/30 font-display text-5xl">
@@ -177,7 +180,9 @@ function HomeContent() {
   const isSignedIn = sessionStatus === 'authenticated' && !!session?.user
 
   useEffect(() => {
-    fetch('/api/artists').then(r => r.json()).then(data => {
+    // Browser-cache the artist list — served from CDN in ~50ms for repeat visits
+    // and new devices after the first global cache fill.
+    fetch('/api/artists', { cache: 'force-cache' }).then(r => r.json()).then(data => {
       setArtists(Array.isArray(data) ? data : [])
       setLoading(false)
     }).catch(() => setLoading(false))
@@ -289,7 +294,7 @@ function HomeContent() {
                   className="font-display font-bold uppercase gold-text -mt-0.5"
                   style={{
                     fontSize: 'clamp(52px, 14vw, 86px)',
-                    lineHeight: 0.95,
+                    lineHeight: 0.85,
                     letterSpacing: '0.02em',
                     textShadow: '0 6px 24px rgba(0,0,0,0.6)',
                   }}
@@ -368,7 +373,7 @@ function HomeContent() {
                   Redifining <span className="italic">The</span>
                 </p>
                 <h1 className="font-display font-bold uppercase tracking-[0.04em] -mt-2 gold-text text-left"
-                  style={{ fontSize: 'clamp(88px, 10.5vw, 160px)', lineHeight: 0.95, textShadow: '0 6px 24px rgba(0,0,0,0.6)' }}>
+                  style={{ fontSize: 'clamp(88px, 10.5vw, 160px)', lineHeight: 0.85, textShadow: '0 6px 24px rgba(0,0,0,0.6)' }}>
                   VISION
                 </h1>
               </div>

@@ -227,6 +227,6 @@ This project and its contents are proprietary. Unauthorized copying, distributio
 
 *Live · Create · Perform · Inspire*
 
-Created by **Samuel Barrientos** · DLE Entertainment
+Created by **Sammuel Barrientos** · DLE Entertainment
 
 </div>

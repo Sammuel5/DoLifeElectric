@@ -12,71 +12,129 @@ import { MobileSwipeRow, DesktopCarousel } from '@/components/TalentCarousel'
 /*
  * HeroBackgroundVideo
  * Full-bleed background video that covers the entire hero section.
- * Loads /uploads/videos/home-montage.mp4 with autoplay/muted/loop.
+ *
+ * TWO VIDEOS:
+ *   - Desktop (lg: 1024px+):  /uploads/videos/home-montage.mp4
+ *   - Mobile/tablet (<lg):    /uploads/videos/home-montage-mobile.mp4
+ *
+ * The correct video is chosen based on viewport width; only the video that
+ * matches the device actually starts downloading (saves mobile data and
+ * avoids loading the big desktop file on phones). Resize/orientation changes
+ * also swap correctly (e.g. rotating a tablet).
+ *
  * If the file is missing, falls back to the solid taupe background.
  */
 function HeroBackgroundVideo() {
-  const videoRef = useRef(null)
+  const desktopVideoRef = useRef(null)
+  const mobileVideoRef = useRef(null)
   const [videoReady, setVideoReady] = useState(true)
   const [isPlaying, setIsPlaying] = useState(true)
   const [isMuted, setIsMuted] = useState(true)
   const [showControls, setShowControls] = useState(false)
-  // Don't force preload the whole video on mobile/metered connections —
-  // only preload metadata so the poster shows up fast and playback starts
-  // when the browser decides it has spare bandwidth.
-  const [shouldPreloadAuto, setShouldPreloadAuto] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+  const [desktopPreloadAuto, setDesktopPreloadAuto] = useState(false)
 
+  // Pick the right video based on viewport width. Match the lg: (1024px)
+  // breakpoint that the rest of the hero layout already uses.
   useEffect(() => {
-    const v = videoRef.current
-    if (!v) return
-    // Heuristic: preload=auto on desktop / fast connections; metadata-only on mobile
-    const isSmall = window.matchMedia('(max-width: 1023px)').matches
+    const mql = window.matchMedia('(max-width: 1023px)')
+    const update = () => setIsMobile(mql.matches)
+    update()
+    // Safari <14 uses addListener; modern browsers use addEventListener
+    if (mql.addEventListener) mql.addEventListener('change', update)
+    else mql.addListener(update)
+    return () => {
+      if (mql.removeEventListener) mql.removeEventListener('change', update)
+      else mql.removeListener(update)
+    }
+  }, [])
+
+  // Preload strategy — per active video:
+  //  • Desktop / fast connection → preload=auto (buffer aggressively so hero plays instantly)
+  //  • Mobile / save-data / slow connection → preload=metadata (don't waste data)
+  useEffect(() => {
     const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection
     const isSlow = conn && (conn.saveData || /2g|3g|slow-2g/i.test(conn.effectiveType || ''))
-    if (!isSmall && !isSlow) {
-      v.preload = 'auto'
-      setShouldPreloadAuto(true)
-    } else {
+    const v = isMobile ? mobileVideoRef.current : desktopVideoRef.current
+    const other = isMobile ? desktopVideoRef.current : mobileVideoRef.current
+    if (!v) return
+
+    if (isMobile || isSlow) {
       v.preload = 'metadata'
+      setDesktopPreloadAuto(false)
+    } else {
+      v.preload = 'auto'
+      setDesktopPreloadAuto(true)
     }
+
+    // Pause + release the *other* video so it doesn't waste bandwidth on the
+    // wrong screen size (e.g. after a tablet rotation to desktop).
+    if (other) {
+      try { other.pause() } catch (_) {}
+      other.removeAttribute('src')
+      other.load()
+    }
+
     const tryPlay = () => { v.play().catch(() => {}) }
     // Small delay so the hero text/logo render first, then the video starts
     const t = setTimeout(tryPlay, 150)
     return () => clearTimeout(t)
-  }, [])
+  }, [isMobile])
+
+  // Keep the active video element reference handy for controls
+  const activeVideoRef = isMobile ? mobileVideoRef : desktopVideoRef
 
   const togglePlay = () => {
-    const v = videoRef.current
+    const v = activeVideoRef.current
     if (!v) return
     if (v.paused) { v.play(); setIsPlaying(true) }
     else { v.pause(); setIsPlaying(false) }
   }
 
   const toggleMute = () => {
-    const v = videoRef.current
-    if (!v) return
-    v.muted = !v.muted
-    setIsMuted(v.muted)
+    // Mute/unmute both videos so toggle state stays consistent after rotation
+    ;[desktopVideoRef.current, mobileVideoRef.current].forEach(v => {
+      if (v) v.muted = !isMuted
+    })
+    setIsMuted(m => !m)
   }
+
+  const handlePlay = () => setIsPlaying(true)
+  const handlePause = () => setIsPlaying(false)
 
   if (!videoReady) return null
 
+  // Shared video props
+  const videoProps = {
+    autoPlay: true,
+    muted: true,
+    loop: true,
+    playsInline: true,
+    onError: () => setVideoReady(false),
+    onPlay: handlePlay,
+    onPause: handlePause,
+  }
+
   return (
     <>
-      {/* Full-bleed video — NO overlays, NO tints, NO vignettes, NO grey wash */}
+      {/* DESKTOP video (lg+: 1024px and up) */}
       <video
-        ref={videoRef}
-        className="absolute inset-0 w-full h-full object-cover"
-        src="/uploads/videos/home-montage.mp4"
-        autoPlay
-        muted
-        loop
-        playsInline
-        preload={shouldPreloadAuto ? 'auto' : 'metadata'}
+        ref={desktopVideoRef}
+        className={`absolute inset-0 w-full h-full object-cover ${isMobile ? 'hidden' : ''}`}
+        src={isMobile ? undefined : '/uploads/videos/home-montage.mp4'}
         poster="/uploads/images/home/video-poster.webp"
-        onError={() => setVideoReady(false)}
-        onPlay={() => setIsPlaying(true)}
-        onPause={() => setIsPlaying(false)}
+        preload={desktopPreloadAuto ? 'auto' : 'metadata'}
+        {...videoProps}
+      />
+
+      {/* MOBILE video (below 1024px) */}
+      <video
+        ref={mobileVideoRef}
+        className={`absolute inset-0 w-full h-full object-cover ${isMobile ? '' : 'hidden'}`}
+        src={isMobile ? '/uploads/videos/home-montage-mobile.mp4' : undefined}
+        poster="/uploads/images/home/video-poster.webp"
+        preload="metadata"
+        {...videoProps}
       />
 
       {/* Tiny playback controls in top-right corner (visible on hover/focus) */}
@@ -294,7 +352,7 @@ function HomeContent() {
                   className="font-display font-bold uppercase gold-text -mt-0.5"
                   style={{
                     fontSize: 'clamp(52px, 14vw, 86px)',
-                    lineHeight: 0.85,
+                    lineHeight: 0.95,
                     letterSpacing: '0.02em',
                     textShadow: '0 6px 24px rgba(0,0,0,0.6)',
                   }}
@@ -368,12 +426,12 @@ function HomeContent() {
                 </div>
               </div>
               <div className="leading-none self-start">
-                <p className="text-white leading-[0.85]"
+                <p className="text-white leading-[0.95]"
                   style={{ fontFamily: '"Pinyon Script", "Great Vibes", cursive', textShadow: '0 4px 20px rgba(0,0,0,0.7)', fontSize: 'clamp(36px, 4.4vw, 60px)' }}>
                   Redifining <span className="italic">The</span>
                 </p>
                 <h1 className="font-display font-bold uppercase tracking-[0.04em] -mt-2 gold-text text-left"
-                  style={{ fontSize: 'clamp(88px, 10.5vw, 160px)', lineHeight: 0.85, textShadow: '0 6px 24px rgba(0,0,0,0.6)' }}>
+                  style={{ fontSize: 'clamp(88px, 10.5vw, 160px)', lineHeight: 0.95, textShadow: '0 6px 24px rgba(0,0,0,0.6)' }}>
                   VISION
                 </h1>
               </div>
@@ -828,7 +886,7 @@ function HomeContent() {
 
                 <div className="text-white/80 leading-snug max-w-lg mx-auto md:mx-0 space-y-1" style={{ fontSize: 'clamp(13px, 3.2vw, 15px)' }}>
                   <p>For business inquiries, artist submissions, or fan support — sign in and send us a message, or email us directly.</p>
-                  <p>For urgent donation/refund issues, include your PayMongo reference number.</p>
+                  <p>For urgent gift/refund issues, include your PayMongo reference number.</p>
                 </div>
               </div>
 

@@ -3,11 +3,11 @@ import Link from 'next/link'
 
 const faqs = [
   { q: 'HOW DO I SEND A GIFT TO AN ARTIST?', a: 'Click on any artist card on the homepage to watch their opening video. After the video ends (or click the "Gifts" button at any time), select a gift type (Food, Clothes, Gift, or Cash), choose an amount in PHP, sign in with Google, and complete payment securely via PayMongo\'s hosted checkout.' },
-  { q: 'DO I NEED TO SIGN IN TO DONATE?', a: 'Yes — for security and to prevent fraud, you must sign in with Google before sending money or gifts. This protects both you and our artists from unauthorized transactions.' },
+  { q: 'DO I NEED TO SIGN IN TO SEND A GIFT?', a: 'Yes — for security and to prevent fraud, you must sign in with Google before sending a gift to an artist. This protects both you and our artists from unauthorized transactions.' },
   { q: 'IS MY PAYMENT INFORMATION SAFE?', a: 'Absolutely. All payments are processed through PayMongo, a BSP-licensed, PCI-DSS compliant Philippine payment processor. We never see or store your credit card, CVV, or e-wallet credentials on our servers — all transactions are encrypted end-to-end with TLS, and payment webhooks are verified with HMAC signatures.' },
   { q: 'WHAT PAYMENT METHODS DO YOU ACCEPT?', a: 'We accept QR Ph, GCash, Maya, GrabPay, Credit/Debit Cards (Visa/Mastercard/JCB), BPI online banking, UnionBank online banking, and 7-Eleven cash payments — all through PayMongo. All amounts are in Philippine Peso (₱).' },
   { q: 'HOW DOES THE MONEY REACH THE ARTIST?', a: 'All funds go directly to DLE Entertainment\'s PayMongo wallet. The company then distributes funds to each artist per their contract. This ensures proper accounting, tax compliance, and security.' },
-  { q: 'CAN I GET A REFUND?', a: 'If a payment was made in error or an artist is no longer with DLE, contact us at info@dle-entertainment.com with your receipt and we will review refund requests on a case-by-case basis.' },
+  { q: 'CAN I GET A REFUND?', a: 'Gifts are generally non-refundable as they represent voluntary fan support. If a payment was made in error or an artist is no longer with DLE, contact us at info@dle-entertainment.com with your receipt and we will review refund requests on a case-by-case basis.' },
   { q: 'HOW DO I DOWNLOAD MUSIC?', a: 'Streaming/previewing is free for everyone. To download tracks, visit the Music page, sign in with Google (click the lock icon), then click the Download button. Downloads are free for personal, non-commercial use only.' },
   { q: 'CAN I AUDITION OR JOIN DLE?', a: 'We review submissions periodically. Reach out via the Contact page with your portfolio and we will be in touch if there\'s a fit.' },
 ]

@@ -236,9 +236,6 @@ export default function AnnouncementPopup() {
             autoPlay
             muted
             playsInline
-            // @ts-ignore (non-standard attrs needed for iOS Safari)
-            webkit-playsinline="true"
-            x5-playsinline="true"
             controls={false}
             onEnded={() => handleSkip('video-ended')}
             onError={() => handleSkip('error')}

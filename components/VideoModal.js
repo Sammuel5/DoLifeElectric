@@ -105,7 +105,8 @@ export default function VideoModal({ artist, onClose }) {
               <div className="relative w-full bg-black flex items-center justify-center">
                 <video ref={videoRef} src={artist.videoUrl}
                   className="max-h-[50vh] sm:max-h-[70vh] w-full sm:w-auto max-w-full"
-                  controls playsInline webkit-playsinline="true" x5-playsinline="true" controlsList="nodownload noplaybackrate"
+                  controls playsInline controlsList="nodownload noplaybackrate"
+                  disablePictureInPicture
                   poster={artist.image}
                   onEnded={() => setVideoEnded(true)} />
               </div>

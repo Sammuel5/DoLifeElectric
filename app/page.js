@@ -8,6 +8,17 @@ import { useSearchParams } from 'next/navigation'
 import { Suspense } from 'react'
 import { useSession } from 'next-auth/react'
 import { MobileSwipeRow, DesktopCarousel } from '@/components/TalentCarousel'
+import { heroVideoUrl } from '@/lib/covers'
+
+// HERO VIDEOS — served from Cloudinary (auto-compressed H.264 ~5-15MB) when
+// CLOUDINARY is configured; falls back to local /uploads/videos/ otherwise.
+// Upload these in Cloudinary Media Library → dle/videos/ with these exact
+// filenames (no extension in public_id):
+//   - home-montage         (desktop)
+//   - home-montage-mobile  (phone/tablet)
+// See CLOUDINARY_HERO_VIDEOS.md for step-by-step upload guide.
+const DESKTOP_VIDEO = heroVideoUrl('home-montage.mp4', { width: 1280, bitrateKbps: 1500 })
+const MOBILE_VIDEO  = heroVideoUrl('home-montage-mobile.mp4', { width: 720, bitrateKbps: 800 })
 
 /*
  * HeroBackgroundVideo
@@ -31,113 +42,95 @@ function HeroBackgroundVideo() {
   const [isPlaying, setIsPlaying] = useState(true)
   const [isMuted, setIsMuted] = useState(true)
   const [showControls, setShowControls] = useState(false)
-  const [isMobile, setIsMobile] = useState(false)
-  const [desktopPreloadAuto, setDesktopPreloadAuto] = useState(false)
 
-  // Pick the right video based on viewport width. Match the lg: (1024px)
-  // breakpoint that the rest of the hero layout already uses.
+  // Attach playback behavior the moment the correct video element exists.
+  // Which video is visible is decided 100% by CSS (hidden lg:block / lg:hidden)
+  // so there is zero JS/hydration delay before the right video starts buffering.
   useEffect(() => {
-    const mql = window.matchMedia('(max-width: 1023px)')
-    const update = () => setIsMobile(mql.matches)
-    update()
-    // Safari <14 uses addListener; modern browsers use addEventListener
-    if (mql.addEventListener) mql.addEventListener('change', update)
-    else mql.addListener(update)
-    return () => {
-      if (mql.removeEventListener) mql.removeEventListener('change', update)
-      else mql.removeListener(update)
-    }
+    const isMobileView = window.matchMedia('(max-width: 1023px)').matches
+    const v = isMobileView ? mobileVideoRef.current : desktopVideoRef.current
+    if (!v) return
+    // Desktop: preload the whole video for instant start.
+    // Mobile:  metadata-only to save data plans; playback will still autoplay
+    // after the first chunk is buffered (playsInline+muted lets browsers autostart).
+    v.preload = isMobileView ? 'metadata' : 'auto'
+    // Kick off playback immediately — muted+playsInline lets all browsers autostart.
+    const tryPlay = () => { v.play().catch(() => {}) }
+    const t = setTimeout(tryPlay, 0)
+    return () => clearTimeout(t)
   }, [])
 
-  // Preload strategy — per active video:
-  //  • Desktop / fast connection → preload=auto (buffer aggressively so hero plays instantly)
-  //  • Mobile / save-data / slow connection → preload=metadata (don't waste data)
-  useEffect(() => {
-    const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection
-    const isSlow = conn && (conn.saveData || /2g|3g|slow-2g/i.test(conn.effectiveType || ''))
-    const v = isMobile ? mobileVideoRef.current : desktopVideoRef.current
-    const other = isMobile ? desktopVideoRef.current : mobileVideoRef.current
-    if (!v) return
-
-    if (isMobile || isSlow) {
-      v.preload = 'metadata'
-      setDesktopPreloadAuto(false)
-    } else {
-      v.preload = 'auto'
-      setDesktopPreloadAuto(true)
-    }
-
-    // Pause + release the *other* video so it doesn't waste bandwidth on the
-    // wrong screen size (e.g. after a tablet rotation to desktop).
-    if (other) {
-      try { other.pause() } catch (_) {}
-      other.removeAttribute('src')
-      other.load()
-    }
-
-    const tryPlay = () => { v.play().catch(() => {}) }
-    // Small delay so the hero text/logo render first, then the video starts
-    const t = setTimeout(tryPlay, 150)
-    return () => clearTimeout(t)
-  }, [isMobile])
-
-  // Keep the active video element reference handy for controls
-  const activeVideoRef = isMobile ? mobileVideoRef : desktopVideoRef
+  const activeVideo = () => {
+    const isMobileView = window.matchMedia('(max-width: 1023px)').matches
+    return isMobileView ? mobileVideoRef.current : desktopVideoRef.current
+  }
 
   const togglePlay = () => {
-    const v = activeVideoRef.current
+    const v = activeVideo()
     if (!v) return
     if (v.paused) { v.play(); setIsPlaying(true) }
     else { v.pause(); setIsPlaying(false) }
   }
 
   const toggleMute = () => {
-    // Mute/unmute both videos so toggle state stays consistent after rotation
-    ;[desktopVideoRef.current, mobileVideoRef.current].forEach(v => {
-      if (v) v.muted = !isMuted
-    })
-    setIsMuted(m => !m)
+    const nextMuted = !isMuted
+    ;[desktopVideoRef.current, mobileVideoRef.current].forEach(v => { if (v) v.muted = nextMuted })
+    setIsMuted(nextMuted)
   }
-
-  const handlePlay = () => setIsPlaying(true)
-  const handlePause = () => setIsPlaying(false)
 
   if (!videoReady) return null
 
-  // Shared video props
-  const videoProps = {
-    autoPlay: true,
-    muted: true,
-    loop: true,
-    playsInline: true,
-    onError: () => setVideoReady(false),
-    onPlay: handlePlay,
-    onPause: handlePause,
-  }
-
   return (
     <>
-      {/* DESKTOP video (lg+: 1024px and up) */}
+      {/*
+        TWO <video> elements. CSS decides which one is visible using Tailwind's
+        responsive classes. The NON-visible one has src=undefined so the browser
+        does NOT download it. Browsers are smart enough to only preload the one
+        that actually has a src and is display: block.
+      */}
+
+      {/* DESKTOP video (lg: 1024px and up) */}
       <video
         ref={desktopVideoRef}
-        className={`absolute inset-0 w-full h-full object-cover ${isMobile ? 'hidden' : ''}`}
-        src={isMobile ? undefined : '/uploads/videos/home-montage.mp4'}
+        className="hidden lg:block absolute inset-0 w-full h-full object-cover"
+        src={DESKTOP_VIDEO}
         poster="/uploads/images/home/video-poster.webp"
-        preload={desktopPreloadAuto ? 'auto' : 'metadata'}
-        {...videoProps}
+        preload="auto"
+        autoPlay
+        muted
+        loop
+        playsInline
+        webkit-playsinline="true"
+        x5-playsinline="true"
+        controlsList="nodownload nofullscreen noremoteplayback"
+        disablePictureInPicture
+        onError={() => setVideoReady(false)}
+        onPlay={() => setIsPlaying(true)}
+        onPause={() => setIsPlaying(false)}
       />
 
       {/* MOBILE video (below 1024px) */}
       <video
         ref={mobileVideoRef}
-        className={`absolute inset-0 w-full h-full object-cover ${isMobile ? '' : 'hidden'}`}
-        src={isMobile ? '/uploads/videos/home-montage-mobile.mp4' : undefined}
+        className="block lg:hidden absolute inset-0 w-full h-full object-cover"
+        media="(max-width: 1023px)"
+        src={MOBILE_VIDEO}
         poster="/uploads/images/home/video-poster.webp"
         preload="metadata"
-        {...videoProps}
+        autoPlay
+        muted
+        loop
+        playsInline
+        webkit-playsinline="true"
+        x5-playsinline="true"
+        controlsList="nodownload nofullscreen noremoteplayback"
+        disablePictureInPicture
+        onError={() => setVideoReady(false)}
+        onPlay={() => setIsPlaying(true)}
+        onPause={() => setIsPlaying(false)}
       />
 
-      {/* Tiny playback controls in top-right corner (visible on hover/focus) */}
+      {/* Tiny playback controls in top-right corner */}
       <div
         className="absolute top-4 right-4 z-30 flex gap-2 opacity-0 transition-opacity duration-300"
         style={{ opacity: showControls ? 1 : undefined }}
@@ -280,13 +273,28 @@ function HomeContent() {
       {/* ========================================== */}
       <section
         className="relative w-full"
-        style={{ background: '#0A0A0A' }}
+        style={{ background: '#0A0A0A', backgroundColor: '#0A0A0A' }}
       >
         {/* Viewport height container */}
-        <div className="relative w-full overflow-hidden" style={{ minHeight: 'calc(100dvh - var(--nav-h))' }}>
+        <div className="relative w-full overflow-hidden" style={{ minHeight: 'calc(100dvh - var(--nav-h))', background: '#0A0A0A' }}>
 
-          {/* Layer 1: full-bleed background video */}
-          <HeroBackgroundVideo />
+          {/* Layer 0: instant-paint poster — shows BEFORE any video bytes arrive
+              so the hero is never a black/white hole. Uses native <img> with
+              fetchPriority=high + absolute fill; video covers it once it plays. */}
+          <img
+            src="/uploads/images/home/video-poster.webp"
+            alt=""
+            aria-hidden="true"
+            fetchPriority="high"
+            decoding="sync"
+            className="absolute inset-0 w-full h-full object-cover z-[1]"
+            style={{ opacity: 1, transition: 'opacity 0.6s ease 0.2s' }}
+          />
+
+          {/* Layer 1: full-bleed background video (z-index over the poster) */}
+          <div className="absolute inset-0 z-[2]">
+            <HeroBackgroundVideo />
+          </div>
 
           {/* Dark gradient: gentle bottom fade so artist in front shows clearly */}
           <div

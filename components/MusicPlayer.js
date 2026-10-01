@@ -1,6 +1,7 @@
 'use client'
 import { createContext, useContext, useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { useSession, signIn } from 'next-auth/react'
+import SmartImage from '@/components/SmartImage'
 import { DEFAULT_TRACK_COVER, thumbUrl, cardUrl, heroUrl } from '@/lib/covers'
 
 // ==============================================================
@@ -453,14 +454,13 @@ function TrackArtwork({ track, size = 'md' }) {
   const isDefault = src === DEFAULT_TRACK_COVER
   return (
     <div className={`${sizes[size]} flex-shrink-0 bg-dark-light overflow-hidden`}>
-      <img
+      <SmartImage
         src={src}
         alt=""
         className={`w-full h-full ${isDefault ? 'object-contain p-2 opacity-70' : 'object-cover'}`}
-        loading="lazy"
-        decoding="async"
         width={96}
         height={96}
+        fallback={DEFAULT_TRACK_COVER}
       />
     </div>
   )
@@ -567,14 +567,13 @@ export function AlbumCard({ album, onClick }) {
       className="w-40 sm:w-44 md:w-48 text-left group bg-dark-card hover:bg-white/10 p-3 rounded-md transition-all duration-200 active:scale-[0.97]"
     >
       <div className="relative w-full aspect-square bg-dark-light overflow-hidden shadow-lg mb-3">
-        <img
+        <SmartImage
           src={cardCover}
           alt=""
           className={`w-full h-full ${isDefault ? 'object-contain p-6 opacity-70' : 'object-cover group-hover:scale-105 transition-transform duration-300'}`}
-          loading="lazy"
-          decoding="async"
           width={400}
           height={400}
+          fallback={DEFAULT_TRACK_COVER}
         />
         <div className="absolute bottom-2 right-2 w-11 h-11 rounded-full bg-gold text-dark flex items-center justify-center shadow-xl opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200">
           <PlayIcon size={18} className="ml-0.5" />

@@ -8,6 +8,7 @@ import { useSearchParams } from 'next/navigation'
 import { Suspense } from 'react'
 import { useSession } from 'next-auth/react'
 import { MobileSwipeRow, DesktopCarousel } from '@/components/TalentCarousel'
+import SmartImage from '@/components/SmartImage'
 import { heroVideoUrl } from '@/lib/covers'
 
 // HERO VIDEOS — served from Cloudinary (auto-compressed H.264 ~5-15MB) when
@@ -168,22 +169,16 @@ function TalentCard({ artist, onClick, featured }) {
       onClick={onClick}
       style={{ aspectRatio: '3/4', minWidth: 0 }}
     >
-      {/* Image */}
-      {artist.image ? (
-        <img
-          src={artist.image}
-          alt=""
-          className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-          loading="lazy"
-          decoding="async"
-          width={400}
-          height={533}
-        />
-      ) : (
-        <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-[#1a1610] to-[#0A0806] text-white/30 font-display text-5xl">
-          {artist.name?.[0] || '?'}
-        </div>
-      )}
+      {/* Image — SmartImage retries once on Cloudinary cold-start and falls
+          back to the DLE shield logo if the URL is missing or permanently
+          fails, so new users never see a broken-image icon. */}
+      <SmartImage
+        src={artist.image}
+        alt=""
+        className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+        width={400}
+        height={533}
+      />
 
       {/* Top dark fade for image */}
       <div

@@ -4,8 +4,12 @@ import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import Providers from '@/components/Providers'
 import SetupBanner from '@/components/SetupBanner'
+import { Analytics } from '@vercel/analytics/next'
+import { SpeedInsights } from '@vercel/speed-insights/next'
+
 import CustomCursor from '@/components/CustomCursor'
 import AnnouncementPopup from '@/components/AnnouncementPopup'
+import CookieConsent from '@/components/CookieConsent'
 import { ThemeProvider, themeInitScript } from '@/components/ThemeProvider'
 import { heroVideoUrl } from '@/lib/covers'
 
@@ -52,6 +56,14 @@ export default function RootLayout({ children }) {
         <link rel="preconnect" href="https://www.googleapis.com" crossOrigin="" />
         <link rel="dns-prefetch" href="https://accounts.google.com" />
 
+        {/* Cloudinary CDN — preconnect so artist portraits / album covers / hero
+            video start their TLS handshake immediately on first visit. Without
+            this, new users pay a ~200-500ms connection penalty before the first
+            image byte can arrive, which is enough to cause flaky first-loads
+            when 48 portraits fire off at once. */}
+        <link rel="preconnect" href="https://res.cloudinary.com" crossOrigin="" />
+        <link rel="dns-prefetch" href="https://res.cloudinary.com" />
+
         {/* Preload the small DLE logo so it appears immediately in the hero. */}
         <link rel="preload" as="image" href="/dlelogo/dle-logo-sm.webp" fetchPriority="high" />
 
@@ -84,6 +96,9 @@ export default function RootLayout({ children }) {
             <Footer />
             <CustomCursor />
             <AnnouncementPopup />
+            <CookieConsent />
+            <Analytics />
+            <SpeedInsights />
           </Providers>
         </ThemeProvider>
       </body>

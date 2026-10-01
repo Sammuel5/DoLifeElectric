@@ -930,15 +930,51 @@ function ArtistsManager({ artists, onRefresh }) {
   const [query, setQuery] = useState('')
 
   const groups = artists.filter(a => a.isGroup)
+  // Build a quick lookup: groupId → group doc, and groupId → array of member docs
+  const groupById = useMemo(() => {
+    const m = new Map()
+    groups.forEach(g => m.set(String(g._id), g))
+    return m
+  }, [groups])
+  const membersByGroupId = useMemo(() => {
+    const m = new Map()
+    artists.forEach(a => {
+      if (!a.isGroup && a.groupId) {
+        const key = String(a.groupId)
+        if (!m.has(key)) m.set(key, [])
+        m.get(key).push(a)
+      }
+    })
+    return m
+  }, [artists])
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
     if (!q) return artists
-    return artists.filter(a =>
+
+    // Direct text-match on an artist's own fields
+    const matchesSelf = a =>
       a.name?.toLowerCase().includes(q) ||
       a.title?.toLowerCase().includes(q) ||
       a.bio?.toLowerCase().includes(q)
-    )
-  }, [artists, query])
+
+    // A member matches if their parent GROUP matches the query
+    const matchesParentGroup = a => {
+      if (a.isGroup || !a.groupId) return false
+      const g = groupById.get(String(a.groupId))
+      return !!(g && matchesSelf(g))
+    }
+
+    // A group matches if ANY of its members match the query (so searching
+    // a member name also surfaces their group in the results)
+    const matchesMember = a => {
+      if (!a.isGroup) return false
+      const members = membersByGroupId.get(String(a._id)) || []
+      return members.some(matchesSelf)
+    }
+
+    return artists.filter(a => matchesSelf(a) || matchesParentGroup(a) || matchesMember(a))
+  }, [artists, query, groupById, membersByGroupId])
 
   const reset = () => setEditing(null) || setForm({ name: '', title: '', bio: '', image: '', videoUrl: '', isGroup: false, groupId: null })
 
@@ -1058,7 +1094,7 @@ const uploadFile = async (e, field) => {
 
       <div className="order-1 lg:order-2 lg:col-span-3">
         <SectionTitle icon={Users} title="Artists" count={filtered.length} subtitle={`${groups.length} group${groups.length !== 1 ? 's' : ''}`} />
-        <SearchInput value={query} onChange={e => setQuery(e.target.value)} placeholder="Search artists by name, title, bio…" />
+        <SearchInput value={query} onChange={e => setQuery(e.target.value)} placeholder="Search by artist name, group, title, or bio…" />
         <div className="space-y-2 max-h-[640px] overflow-y-auto pr-1">
           {filtered.length === 0 && <EmptyState message={query ? 'No artists match your search.' : 'No artists yet. Add one to get started.'} emoji="🎤" />}
           {groupList.map(a => {

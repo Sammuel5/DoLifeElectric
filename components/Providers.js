@@ -19,16 +19,22 @@ export default function Providers({ children }) {
           toastOptions={{
             duration: 3500,
             style: {
-              background: '#1A1A1A',
-              color: '#fff',
-              border: '1px solid rgba(201,168,76,0.3)',
+              background: 'var(--bg-elev)',
+              color: 'var(--text)',
+              border: '1px solid var(--gold-dim)',
               fontSize: 14,
               padding: '10px 14px',
               maxWidth: '100%',
               wordBreak: 'break-word',
+              borderRadius: 4,
+              boxShadow: 'var(--shadow)',
             },
-            success: { iconTheme: { primary: '#C9A84C', secondary: '#0A0A0A' } },
-            error:   { iconTheme: { primary: '#ef4444', secondary: '#0A0A0A' } },
+            success: {
+              iconTheme: { primary: 'var(--gold)', secondary: '#0A0A0A' },
+            },
+            error: {
+              iconTheme: { primary: '#ef4444', secondary: '#0A0A0A' },
+            },
           }}
         />
       </PlayerProvider>

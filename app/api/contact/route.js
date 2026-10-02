@@ -59,8 +59,19 @@ export async function POST(req) {
       })
 
       if (error) {
+        let friendlyError = error.message || JSON.stringify(error)
+
+        // Detect Resend test-mode error and give actionable instructions
+        if (/testing emails|verify a domain|only send/i.test(friendlyError)) {
+          friendlyError =
+            'Email not sent yet — your Resend account is still in test mode. ' +
+            'While testing, set CONTACT_EMAIL in .env.local to the same Gmail you signed up to Resend with ' +
+            '(e.g. ssammuelbarrientos@gmail.com). To send to info@dle-entertainment.com, ' +
+            'verify your domain at resend.com/domains and set EMAIL_FROM=website@dle-entertainment.com.'
+        }
+
         return NextResponse.json(
-          { error: 'Email provider error: ' + (error.message || JSON.stringify(error)) },
+          { error: 'Email provider error: ' + friendlyError },
           { status: 500 }
         )
       }

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { requireSuperAdmin } from '@/lib/auth'
+import { requirePermission } from '@/lib/auth'
 import dbConnect from '@/lib/dbConnect'
 import TrackActivity from '@/models/TrackActivity'
 import 'server-only'
@@ -32,7 +32,8 @@ function timeCell(d) {
 
 export async function GET(req) {
   try {
-    const auth = await requireSuperAdmin()
+    // Super admin OR any admin granted analytics permission can export.
+    const auth = await requirePermission('analytics')
     if (!auth.allowed) return auth.error
 
     await dbConnect()

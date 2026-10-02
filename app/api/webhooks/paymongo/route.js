@@ -9,33 +9,41 @@ export const runtime = 'nodejs'
 const WEBHOOK_SECRET = process.env.PAYMONGO_WEBHOOK_SECRET
 
 /**
- * PayMongo signs webhooks with HMAC-SHA256. The header looks like:
- *   t=1699999999,s=abcd1234...
- * We extract the "s" parameter and compare against our own SHA256 of the raw body.
- * If WEBHOOK_SECRET is NOT configured (local dev), we skip verification and
- * process the event anyway — this lets local testing work without setting up
- * ngrok + PayMongo dashboard webhooks.
+ * PayMongo signs webhooks with HMAC-SHA256(webhookSecret, rawBody) and sends
+ * the hex digest in the `paymongo-signature` header. If verification fails, we
+ * log enough info to diagnose (wrong secret, header mangled by proxy, etc.).
  */
 function verifySignature(rawBody, signatureHeader) {
-  if (!WEBHOOK_SECRET) return true // accept all if not configured
+  if (!WEBHOOK_SECRET) return true // accept all if not configured (local dev)
   if (!signatureHeader) return false
   try {
-    // Header can be either bare hex or "t=<ts>,s=<hex>"
-    let sig = signatureHeader
-    if (signatureHeader.includes(',')) {
-      const parts = signatureHeader.split(',').reduce((acc, p) => {
+    // Normalize: header might be bare hex OR Stripe-style "t=ts,s=hex"
+    let sigHex = signatureHeader.trim()
+    if (sigHex.includes(',')) {
+      // Some proxies/versions wrap as "t=1234567890,s=abcdef..." — extract the s= part
+      const parts = sigHex.split(',').reduce((acc, p) => {
         const eq = p.indexOf('=')
         if (eq === -1) return acc
         acc[p.slice(0, eq).trim()] = p.slice(eq + 1).trim()
         return acc
       }, {})
-      sig = parts.s || signatureHeader
+      sigHex = parts.s || sigHex
     }
+
     const expected = crypto
       .createHmac('sha256', WEBHOOK_SECRET)
       .update(rawBody)
       .digest('hex')
-    return sig.length === expected.length && crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))
+
+    const sigBuf = Buffer.from(sigHex, 'hex')
+    const expBuf = Buffer.from(expected, 'hex')
+    if (sigBuf.length !== expBuf.length) {
+      console.error('[paymongo-webhook] signature length mismatch: got', sigHex.length, 'hex chars, expected', expected.length,
+        '— likely wrong PAYMONGO_WEBHOOK_SECRET. Header prefix:', sigHex.slice(0, 12) + '...',
+        'Expected prefix:', expected.slice(0, 12) + '...')
+      return false
+    }
+    return crypto.timingSafeEqual(sigBuf, expBuf)
   } catch (e) {
     console.error('[paymongo-webhook] signature parse error:', e.message)
     return false
@@ -139,11 +147,14 @@ export async function POST(req) {
   try {
     await dbConnect()
 
-    const rawBody = await req.text()
+    // Read body as raw ArrayBuffer → Buffer so HMAC operates on exact bytes
+    // (req.text() can normalize line endings in some edge cases, breaking sig).
+    const arrBuf = await req.arrayBuffer()
+    const rawBody = Buffer.from(arrBuf)
     const signature = req.headers.get('paymongo-signature') || req.headers.get('x-paymongo-signature')
 
     let event
-    try { event = JSON.parse(rawBody) } catch (_) {
+    try { event = JSON.parse(rawBody.toString('utf8')) } catch (_) {
       console.warn('[paymongo-webhook] invalid JSON body')
       return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
     }

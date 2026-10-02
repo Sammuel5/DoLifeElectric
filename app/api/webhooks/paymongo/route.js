@@ -11,14 +11,14 @@ const WEBHOOK_SECRET = process.env.PAYMONGO_WEBHOOK_SECRET
 /**
  * Verify PayMongo webhook signature.
  *
- * PayMongo has historically used two signing schemes:
- *   (A) Bare hex HMAC-SHA256(secret, rawBody) in the `paymongo-signature` header
- *       — this is what their older docs show.
- *   (B) Stripe-style "t=<ts>,s=<hex>" where s = HMAC-SHA256(secret, "<ts>." + rawBody)
- *       — this is what their current production webhooks actually send (as the
- *       logs confirm: header starts with "t=1790917...").
- * We try both, and also tolerate both orders of parsing so that even if they
- * rotate schemes again we don't drop events.
+ * PayMongo uses a Stripe-inspired signed-header scheme. Over time they've
+ * shipped multiple variants, all of which we accept here:
+ *   v1 (old docs):   bare 64-char hex HMAC-SHA256(secret, body)
+ *   v2 (Stripe-like): "t=<ts>,s=<hex>"   where s = HMAC(secret, "<ts>." + body)
+ *   v3 (current):    "t=<ts>,te=<mode>,li=<hex>"   where li = HMAC(secret, "<ts>." + body)
+ *                    ("te" is empty for test mode, "live" for live; "li" = live signature)
+ * We try every signature-looking key we see (s/li/v1) against both payload
+ * schemes (raw body vs t+body), and accept if any matches.
  */
 function verifySignature(rawBody, signatureHeader) {
   if (!WEBHOOK_SECRET) return true // accept all if secret not configured (local dev)
@@ -26,53 +26,49 @@ function verifySignature(rawBody, signatureHeader) {
   try {
     const header = signatureHeader.trim()
 
-    // Extract timestamp and signature hex from either format
-    let timestamp = null
-    let sigHex = null
-
-    if (header.startsWith('t=') || header.includes(',s=')) {
-      // Scheme B: "t=1234567890,s=abcdef..."
-      const kv = {}
-      header.split(',').forEach(part => {
-        const eq = part.indexOf('=')
-        if (eq > 0) kv[part.slice(0, eq).trim()] = part.slice(eq + 1).trim()
-      })
-      timestamp = kv.t || null
-      sigHex = kv.s || null
-    } else if (/^[0-9a-fA-F]{64}$/.test(header)) {
-      // Scheme A: bare 64-char hex (old docs form)
-      sigHex = header
+    // Bare hex form (v1): 64 hex chars with no commas or =
+    if (/^[0-9a-fA-F]{64}$/.test(header)) {
+      const sigBuf = Buffer.from(header, 'hex')
+      const expBuf = crypto.createHmac('sha256', WEBHOOK_SECRET).update(rawBody).digest()
+      if (sigBuf.length === expBuf.length && crypto.timingSafeEqual(sigBuf, expBuf)) return true
     }
 
-    if (!sigHex) {
-      console.error('[paymongo-webhook] could not parse signature header. First 60 chars:', header.slice(0, 60))
+    // Keyed form (v2/v3): parse all k=v pairs, then test each sig-looking value
+    const kv = {}
+    header.split(',').forEach(part => {
+      const eq = part.indexOf('=')
+      if (eq > 0) kv[part.slice(0, eq).trim()] = part.slice(eq + 1).trim()
+    })
+    const timestamp = kv.t || null
+    // Try any key that could hold a signature — PayMongo has used s, li, v1, v0 across versions.
+    const sigKeys = Object.keys(kv).filter(k => /^(s|li|v\d+|sig|sign(ature)?)$/i.test(k))
+    if (sigKeys.length === 0) {
+      console.error('[paymongo-webhook] could not find signature key in header. Keys found:', Object.keys(kv),
+        'header:', header.slice(0, 100))
       return false
     }
 
-    const sigBuf = Buffer.from(sigHex, 'hex')
-    if (sigBuf.length !== 32) {
-      console.error('[paymongo-webhook] signature hex wrong length:', sigHex.length, 'chars (expected 64 = 32 bytes). Header:', header.slice(0, 80))
-      return false
-    }
+    // Payloads to try: just body (v1), and t+body (v2/v3) when we have a timestamp
+    const payloads = [rawBody]
+    if (timestamp) payloads.push(Buffer.concat([Buffer.from(timestamp + '.'), rawBody]))
 
-    // Try both payload schemes
-    const signedPayloads = [
-      rawBody,                                                       // Scheme A: just body
-      ...(timestamp ? [Buffer.from(timestamp + '.') && Buffer.concat([Buffer.from(timestamp + '.'), rawBody])] : []), // Scheme B: t.body
-    ]
-
-    for (const payload of signedPayloads) {
-      const expected = crypto.createHmac('sha256', WEBHOOK_SECRET).update(payload).digest()
-      if (expected.length === sigBuf.length && crypto.timingSafeEqual(expected, sigBuf)) {
-        return true
+    for (const key of sigKeys) {
+      const sigHex = kv[key]
+      const sigBuf = Buffer.from(sigHex, 'hex')
+      if (sigBuf.length !== 32) continue
+      for (const payload of payloads) {
+        const expBuf = crypto.createHmac('sha256', WEBHOOK_SECRET).update(payload).digest()
+        if (expBuf.length === sigBuf.length && crypto.timingSafeEqual(expBuf, sigBuf)) {
+          return true
+        }
       }
     }
 
-    // Also try Scheme A match against bare hex (fallback)
-    console.error('[paymongo-webhook] signature mismatch. Header prefix:', header.slice(0, 40),
+    console.error('[paymongo-webhook] signature mismatch. Header keys:', Object.keys(kv),
       'timestamp:', timestamp,
+      'tried sig keys:', sigKeys,
       'secret length:', WEBHOOK_SECRET.length,
-      '(recheck that PAYMONGO_WEBHOOK_SECRET starts with whsk_ and matches the webhook in PayMongo Dashboard → Developers → Webhooks)')
+      '(make sure PAYMONGO_WEBHOOK_SECRET starts with whsk_ and matches PayMongo Dashboard → Developers → Webhooks for URL https://dle-entertainment.com/api/webhooks/paymongo)')
     return false
   } catch (e) {
     console.error('[paymongo-webhook] signature verify error:', e.message)

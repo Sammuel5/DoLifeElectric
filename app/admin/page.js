@@ -8,7 +8,7 @@ import {
   TrendingUp, Eye, EyeOff, Home, LayoutDashboard, LineChart, Check, Clock,
   Disc3, Tag, Plus, Terminal, MessageSquare, Send, Lock, Wifi,
   Megaphone, Calendar, CalendarClock, Video, Image as ImageIcon, Timer,
-  Upload as UploadIcon, MousePointerClick,
+  Upload as UploadIcon, MousePointerClick, RefreshCw,
 } from 'lucide-react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
@@ -1734,9 +1734,31 @@ function DonationsView({ isSuperAdmin, onRefresh }) {
   const [exporting, setExporting] = useState(false)
   const [loading, setLoading] = useState(true)
   const [pageRevenue, setPageRevenue] = useState(0)
+  const [reconciling, setReconciling] = useState(false)
+  const [syncingId, setSyncingId] = useState(null)
 
   useEffect(() => { const t = setTimeout(() => setDebouncedQuery(query.trim()), 350); return () => clearTimeout(t) }, [query])
   useEffect(() => { setPage(1) }, [debouncedQuery, statusFilter])
+
+  // Auto-reconcile recent pending donations when the Gifts tab first mounts
+  // (webhooks can fail/delay, so this catches up statuses against PayMongo).
+  useEffect(() => {
+    let cancelled = false
+    async function reconcile() {
+      try {
+        const res = await fetch('/api/donations/reconcile?maxAgeHours=72&limit=50', { method: 'POST' })
+        if (cancelled || !res.ok) return
+        const d = await res.json().catch(() => ({}))
+        if ((d.completed || 0) > 0 || (d.failed || 0) > 0) {
+          toast.success(`Synced with PayMongo: ${d.completed || 0} completed, ${d.failed || 0} failed`)
+          fetchPage(page)
+        }
+      } catch (_) { /* ignore — user can click Sync manually */ }
+    }
+    reconcile()
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const fetchPage = async (p = page) => {
     setLoading(true)
@@ -1797,6 +1819,39 @@ function DonationsView({ isSuperAdmin, onRefresh }) {
       if (res.ok) { toast.success('Gift deleted'); if (donations.length === 1 && page > 1) setPage(page - 1); else refresh() }
       else { const d = await res.json().catch(() => ({})); toast.error(d.error || 'Failed') }
     } catch (e) { toast.error(e.message) }
+  }
+
+  const syncOne = async (id) => {
+    setSyncingId(id)
+    try {
+      const res = await fetch(`/api/donations/sync/${id}`, { cache: 'no-store' })
+      const d = await res.json().catch(() => ({}))
+      if (res.ok) {
+        if (d.status === 'completed') toast.success('Payment confirmed — marked completed')
+        else if (d.status === 'failed') toast('Payment failed (no money received)', { icon: '⚠️' })
+        else if (d.remoteStatus === 'pending') toast('Still pending on PayMongo', { icon: '⏳' })
+        else toast(`Status: ${d.status}`)
+        refresh()
+      } else {
+        toast.error(d.error || 'Sync failed')
+      }
+    } catch (e) { toast.error(e.message) }
+    setSyncingId(null)
+  }
+
+  const reconcileAll = async () => {
+    setReconciling(true)
+    try {
+      const res = await fetch('/api/donations/reconcile?maxAgeHours=720&limit=200', { method: 'POST' })
+      const d = await res.json().catch(() => ({}))
+      if (res.ok) {
+        toast.success(`Checked ${d.checked} — ${d.completed} completed, ${d.failed} failed, ${d.stillPending} still pending`)
+        refresh()
+      } else {
+        toast.error(d.error || 'Reconcile failed')
+      }
+    } catch (e) { toast.error(e.message) }
+    setReconciling(false)
   }
 
   const statusChipClass = s => ({
@@ -1862,6 +1917,12 @@ function DonationsView({ isSuperAdmin, onRefresh }) {
             </button>
           ))}
           <div className="flex-1" />
+          <button onClick={reconcileAll} disabled={reconciling}
+            title="Ask PayMongo for current status of all pending gifts (last 30 days)"
+            className="flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2 text-[11px] sm:text-xs uppercase tracking-wider font-semibold transition-colors disabled:opacity-50 flex-shrink-0 rounded-sm"
+            style={{ background: 'rgba(59,130,246,0.12)', color: '#60a5fa', border: '1px solid rgba(59,130,246,0.25)' }}>
+            <RefreshCw size={13} className={reconciling ? 'animate-spin' : ''} /> <span className="whitespace-nowrap">{reconciling ? 'Syncing…' : '↻ Sync All'}</span>
+          </button>
           <button onClick={exportData} disabled={exporting}
             className="flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2 text-[11px] sm:text-xs uppercase tracking-wider font-semibold transition-colors disabled:opacity-50 flex-shrink-0 rounded-sm"
             style={{ background: 'var(--gold-dim)', color: 'var(--gold)', border: '1px solid var(--gold-dim)' }}>
@@ -1924,8 +1985,13 @@ function DonationsView({ isSuperAdmin, onRefresh }) {
                   </td>
                   {isSuperAdmin && (
                     <td className="p-3 sm:p-4 text-right">
-                      <button onClick={() => deleteDonation(d._id, `${d.userName} → ${d.artistName || 'General'} · ${giftEmojis[d.giftType]} ${formatPHP(d.amount/100)} (${d.status})`)}
-                        className="p-2 inline-flex items-center justify-center rounded-sm transition-colors hover:bg-red-500/10 text-red-400/60 hover:text-red-400" title="Delete"><X size={15} /></button>
+                      <div className="inline-flex items-center gap-1 justify-end">
+                        <button onClick={() => syncOne(d._id)} disabled={syncingId === d._id}
+                          className="p-2 inline-flex items-center justify-center rounded-sm transition-colors hover:bg-blue-500/10 text-blue-400/60 hover:text-blue-400 disabled:opacity-50"
+                          title="Refresh status from PayMongo"><RefreshCw size={14} className={syncingId === d._id ? 'animate-spin' : ''} /></button>
+                        <button onClick={() => deleteDonation(d._id, `${d.userName} → ${d.artistName || 'General'} · ${giftEmojis[d.giftType]} ${formatPHP(d.amount/100)} (${d.status})`)}
+                          className="p-2 inline-flex items-center justify-center rounded-sm transition-colors hover:bg-red-500/10 text-red-400/60 hover:text-red-400" title="Delete"><X size={15} /></button>
+                      </div>
                     </td>
                   )}
                 </tr>

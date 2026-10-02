@@ -105,8 +105,14 @@ async function findDonation(eventData) {
     attrs?.data?.attributes?.reference_number,
   ].filter(Boolean)
 
-  // PayMongo links have a checkout URL that contains the link id — we stored paymongoLinkId
-  const linkId = attrs?.link?.id || attrs?.paymongo_link_id || attrs?.metadata?.link_id
+  // PayMongo links / checkout sessions have an id we stored as paymongoLinkId at
+  // donation creation. The id can surface in several places depending on event shape.
+  const linkId =
+    attrs?.link?.id ||
+    attrs?.paymongo_link_id ||
+    attrs?.checkout_session_id ||
+    attrs?.metadata?.link_id ||
+    attrs?.metadata?.checkout_session_id
 
   for (const ref of candidates) {
     if (typeof ref === 'string' && ref.startsWith('dle_')) {
@@ -185,15 +191,56 @@ export async function POST(req) {
       return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
     }
 
-    eventType = event?.data?.attributes?.type
-    const eventData = event?.data?.attributes?.data || event?.data
+    // PayMongo delivers events in several shapes depending on version/event type:
+    //
+    //   1) Legacy link.payment.paid (v1/links):
+    //        event.data.id                        = link_xxx
+    //        event.data.attributes.type           = "link.payment.paid"
+    //        event.data.attributes.data.id        = pay_xxx   (the actual payment)
+    //        event.data.attributes.data.attributes = { amount, status, source, ... }
+    //
+    //   2) payment.paid (v1/payment intents):
+    //        event.data.id                        = pay_xxx
+    //        event.data.attributes.type           = "payment.paid"
+    //        event.data.attributes                = { amount, status, source, ... }
+    //
+    //   3) checkout_session.payment.paid (v2):
+    //        event.data.type                      = "checkout_session.payment.paid"  (NOT attributes.type)
+    //        event.data.id                        = evt_xxx (event id, sometimes missing)
+    //        event.data.data.id                   = cs_xxx (checkout session)
+    //        event.data.data.attributes.reference_number = our dle_<id>
+    //        event.data.data.attributes.payments[] = [{ id: pay_xxx, attributes: {...} }]
+    //
+    eventType = event?.data?.type || event?.data?.attributes?.type
     const eventId = event?.data?.id
 
-    // PayMongo also wraps: event.data is the link for link.payment.paid events,
-    // and the actual payment is at event.data.attributes.data.
-    // For payment.paid events, event.data IS the payment directly.
-    const payAttrs = (eventData?.attributes) || event?.data?.attributes || {}
-    const paymentId = eventData?.id || event?.data?.id
+    // Dig out the payment object(s) — for v2 checkout sessions there can be multiple
+    // attempts; pick the most recent paid one (or fall back to the last entry).
+    let payObj = null
+    let sessionRefNo = null
+    let sessionMetadata = null
+    let sessionId = null
+    const v2Session = event?.data?.data
+    if (v2Session && Array.isArray(v2Session?.attributes?.payments) && v2Session.attributes.payments.length) {
+      sessionId = v2Session.id
+      sessionRefNo = v2Session.attributes?.reference_number
+      sessionMetadata = v2Session.attributes?.metadata
+      const payments = v2Session.attributes.payments
+      // Prefer a paid payment; otherwise take the last entry.
+      payObj = payments.slice().reverse().find(p => p?.attributes?.status === 'paid') || payments[payments.length - 1]
+    }
+
+    // Fall back to legacy shapes
+    if (!payObj) {
+      // link.payment.paid: payment nested at data.attributes.data
+      const nested = event?.data?.attributes?.data
+      // payment.paid: payment IS event.data
+      const top = event?.data
+      payObj = (nested && nested.id && nested.attributes) ? nested : top
+    }
+
+    const payAttrs = payObj?.attributes || {}
+    const paymentId = payObj?.id
     const status = payAttrs?.status
     const paidAt = payAttrs?.paid_at
     const amountPaid = payAttrs?.amount
@@ -212,7 +259,34 @@ export async function POST(req) {
       return NextResponse.json({ received: true })
     }
 
-    const donation = await findDonation(event.data)
+    // For findDonation we build a synthetic "resource" object that always has the
+    // shape it expects: { id: <paymentId>, attributes: { metadata, reference_number,
+    // amount, link.id, ... } }. For v2 sessions we merge the session-level
+    // reference_number/metadata so lookups find our dle_<id> token, and expose
+    // the checkout session id as attributes.link.id so Strategy 2 (paymongoLinkId)
+    // matches against the stored cs_xxx id.
+    const refNo =
+      payAttrs?.reference_number ||
+      sessionRefNo ||
+      sessionMetadata?.reference_number ||
+      event?.data?.attributes?.reference_number
+    const mergedMeta = {
+      ...(sessionMetadata || {}),
+      ...(payAttrs?.metadata || {}),
+      ...(event?.data?.attributes?.metadata || {}),
+    }
+    const lookupResource = {
+      id: paymentId,
+      attributes: {
+        ...payAttrs,
+        reference_number: refNo,
+        metadata: mergedMeta,
+        external_reference_number: payAttrs?.external_reference_number || refNo,
+        link: sessionId ? { id: sessionId } : (payAttrs?.link || null),
+        paymongo_link_id: sessionId || payAttrs?.paymongo_link_id,
+      },
+    }
+    const donation = await findDonation(lookupResource)
 
     if (!donation) {
       console.warn('[paymongo-webhook] could not match donation for event:', eventType, 'payload keys:', Object.keys(payAttrs))

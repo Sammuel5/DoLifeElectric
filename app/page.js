@@ -254,24 +254,28 @@ function HomeContent() {
     if (result === 'success') {
       toast.success('🎉 Thank you for your support! Payment received.')
       cleanupUrl()
-      // Client-side payment-status sync: if the webhook hasn't fired yet (delay,
-      // wrong secret, preview env, etc.), poll the sync endpoint a few times so
-      // the admin dashboard sees "completed" without waiting for a webhook.
+      // Client-side payment-status sync: poll the sync endpoint repeatedly so
+      // the admin dashboard sees "completed" even if the PayMongo webhook is
+      // delayed/misconfigured/fails. Uses spaced retries over ~90 seconds.
       if (refId && refId.match(/^[0-9a-fA-F]{24}$/)) {
-        let attempts = 0
-        const poll = async () => {
-          attempts++
-          try {
-            const r = await fetch(`/api/donations/sync/${refId}`, { cache: 'no-store' })
-            if (r.ok) {
-              const d = await r.json()
-              if (d.status === 'completed') return // done
-            }
-          } catch (_) {}
-          if (attempts < 5) setTimeout(poll, 2000 * attempts) // 2s, 4s, 6s, 8s
+        const delays = [1500, 4000, 8000, 15000, 25000, 40000]  // absolute times from now
+        let cancelled = false
+        const poll = async (idx) => {
+          if (cancelled || idx >= delays.length) return
+          const wait = idx === 0 ? delays[0] : delays[idx] - delays[idx - 1]
+          setTimeout(async () => {
+            if (cancelled) return
+            try {
+              const r = await fetch(`/api/donations/sync/${refId}`, { cache: 'no-store' })
+              if (r.ok) {
+                const d = await r.json()
+                if (d.status === 'completed') { cancelled = true; return }
+              }
+            } catch (_) {}
+            poll(idx + 1)
+          }, wait)
         }
-        // Start first poll after a short delay (give PayMongo time to update)
-        setTimeout(poll, 1500)
+        poll(0)
       }
     } else if (result === 'cancelled') {
       toast('Payment cancelled.', { icon: 'ℹ️' })

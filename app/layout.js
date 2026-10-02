@@ -1,17 +1,29 @@
 import './globals.css'
 import { Inter } from 'next/font/google'
+import dynamic from 'next/dynamic'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import Providers from '@/components/Providers'
 import SetupBanner from '@/components/SetupBanner'
-import { Analytics } from '@vercel/analytics/next'
-import { SpeedInsights } from '@vercel/speed-insights/next'
 
 import CustomCursor from '@/components/CustomCursor'
 import AnnouncementPopup from '@/components/AnnouncementPopup'
 import CookieConsent from '@/components/CookieConsent'
 import { ThemeProvider, themeInitScript } from '@/components/ThemeProvider'
 import { heroVideoUrl } from '@/lib/covers'
+
+// Vercel Analytics + Speed Insights. Loaded dynamically with ssr:false so that
+// if @vercel/analytics / @vercel/speed-insights haven't been installed yet (e.g.
+// user forgot to run `npm install` after pulling the update), the dev server
+// still starts — analytics simply won't activate until `npm install` is run.
+const Analytics = dynamic(
+  () => import('@vercel/analytics/next').then(m => m.Analytics).catch(() => () => null),
+  { ssr: false }
+)
+const SpeedInsights = dynamic(
+  () => import('@vercel/speed-insights/next').then(m => m.SpeedInsights).catch(() => () => null),
+  { ssr: false }
+)
 
 // Hero video preload URL — uses the same helper the video component uses so
 // <link rel=preload> and the actual <video src=> always match.

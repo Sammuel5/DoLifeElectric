@@ -233,9 +233,50 @@ function HomeContent() {
       setLoading(false)
     }).catch(() => setLoading(false))
 
-    const result = searchParams?.get('donation')
-    if (result === 'success') toast.success('🎉 Thank you for your support! Payment received.')
-    else if (result === 'cancelled') toast('Payment cancelled.', { icon: 'ℹ️' })
+    // Support both ?gift=success (new homepage redirect) and ?donation=success (legacy)
+    const giftResult = searchParams?.get('gift')
+    const donationResult = searchParams?.get('donation')
+    const refId = searchParams?.get('ref')
+    const result = giftResult || donationResult
+
+    const cleanupUrl = () => {
+      if (typeof window !== 'undefined' && window.history.replaceState) {
+        const url = new URL(window.location.href)
+        url.searchParams.delete('gift')
+        url.searchParams.delete('donation')
+        url.searchParams.delete('ref')
+        url.searchParams.delete('artist')
+        url.searchParams.delete('artistId')
+        window.history.replaceState({}, '', url.pathname + url.search + window.location.hash)
+      }
+    }
+
+    if (result === 'success') {
+      toast.success('🎉 Thank you for your support! Payment received.')
+      cleanupUrl()
+      // Client-side payment-status sync: if the webhook hasn't fired yet (delay,
+      // wrong secret, preview env, etc.), poll the sync endpoint a few times so
+      // the admin dashboard sees "completed" without waiting for a webhook.
+      if (refId && refId.match(/^[0-9a-fA-F]{24}$/)) {
+        let attempts = 0
+        const poll = async () => {
+          attempts++
+          try {
+            const r = await fetch(`/api/donations/sync/${refId}`, { cache: 'no-store' })
+            if (r.ok) {
+              const d = await r.json()
+              if (d.status === 'completed') return // done
+            }
+          } catch (_) {}
+          if (attempts < 5) setTimeout(poll, 2000 * attempts) // 2s, 4s, 6s, 8s
+        }
+        // Start first poll after a short delay (give PayMongo time to update)
+        setTimeout(poll, 1500)
+      }
+    } else if (result === 'cancelled') {
+      toast('Payment cancelled.', { icon: 'ℹ️' })
+      cleanupUrl()
+    }
   }, [searchParams])
 
   // Show first 8 artists on homepage (mix of groups + solo + members)

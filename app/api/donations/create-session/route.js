@@ -97,12 +97,25 @@ export async function POST(req) {
     })
 
     // 6. Build success/cancel URLs
-    const origin = process.env.NEXTAUTH_URL ||
-      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ||
-      `${req.headers.get('x-forwarded-proto') || 'http'}://${req.headers.get('host')}`
+    // Priority: explicit NEXT_PUBLIC_SITE_URL / SITE_URL > NEXTAUTH_URL > VERCEL_URL > request headers.
+    // This ensures PayMongo always redirects back to the LIVE production domain
+    // (https://dle-entertainment.com) — not to a Vercel preview URL or localhost.
+    const configuredOrigin =
+      process.env.NEXT_PUBLIC_SITE_URL ||
+      process.env.SITE_URL ||
+      process.env.NEXTAUTH_URL ||
+      (process.env.VERCEL_URL && process.env.VERCEL_ENV === 'production'
+        ? `https://${process.env.VERCEL_URL}`
+        : null)
+    const fallbackOrigin = `${req.headers.get('x-forwarded-proto') || 'http'}://${req.headers.get('host')}`
+    const origin = configuredOrigin || fallbackOrigin
+    // Ensure origin doesn't have trailing slash
+    const cleanOrigin = origin.replace(/\/+$/, '')
 
-    const successUrl = `${origin}/artists?gift=success&donation=${donation._id}&artist=${encodeURIComponent(artistName)}&artistId=${artistObjId || ''}#gifted`
-    const cancelUrl = `${origin}/artists?gift=cancelled&artistId=${artistObjId || ''}#gifted`
+    // Success lands on the homepage with a thank-you toast + payment ref
+    // (keeps user in the flow instead of dumping them on the artists page).
+    const successUrl = `${cleanOrigin}/?gift=success&ref=${donation._id}&artist=${encodeURIComponent(artistName)}&artistId=${artistObjId || ''}`
+    const cancelUrl = `${cleanOrigin}/?gift=cancelled&ref=${donation._id}`
 
     const amountCentavos = pesosToCentavos(amount)
 

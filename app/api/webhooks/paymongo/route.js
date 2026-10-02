@@ -223,7 +223,8 @@ export async function POST(req) {
 
     switch (eventType) {
       case 'payment.paid':
-      case 'link.payment.paid': {
+      case 'link.payment.paid':
+      case 'checkout_session.payment.paid': {
         if (donation.status !== 'completed') {
           donation.status = 'completed'
           donation.amount = amountPaid || donation.amount

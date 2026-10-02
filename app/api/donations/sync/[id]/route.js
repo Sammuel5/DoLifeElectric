@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import dbConnect from '@/lib/dbConnect'
 import Donation from '@/models/Donation'
-import { retrieveLink, retrievePayment, isPayMongoConfigured } from '@/lib/paymongo'
+import { retrieveResource, isPayMongoConfigured } from '@/lib/paymongo'
 import mongoose from 'mongoose'
 
 export const dynamic = 'force-dynamic'
@@ -45,27 +45,33 @@ export async function GET(req, { params }) {
       return NextResponse.json({ status: donation.status, warning: 'PayMongo not configured' })
     }
 
-    // Try the PayMongo Link first (payments made through our checkout go through Links)
+    // Ask PayMongo for the current state of this checkout session/link/payment.
+    // retrieveResource tries all known API endpoints (v2 checkout_sessions, v1 links,
+    // v1 payments) and returns whichever matches first.
     let paid = false
     let paymentSource = null
     let payAmount = null
 
+    // Try by link id (cs_xxx checkout sessions, link_xxx legacy links)
     if (donation.paymongoLinkId) {
       try {
-        const link = await retrieveLink(donation.paymongoLinkId)
-        const linkAttrs = link?.data?.attributes
-        if (linkAttrs) {
-          // Link statuses: unpaid → paid
-          if (linkAttrs.status === 'paid') {
+        const resource = await retrieveResource(donation.paymongoLinkId)
+        const attrs = resource?.data?.attributes
+        if (attrs) {
+          // Checkout session statuses: active → paid; legacy link: unpaid → paid
+          const isPaid =
+            attrs.status === 'paid' ||
+            attrs.payment_intent?.status === 'succeeded' ||
+            attrs.payments?.some?.(p => p?.attributes?.status === 'paid') ||
+            (attrs.checkout_url && attrs.payments?.length > 0 && attrs.payments.every(p => p?.attributes?.status === 'paid'))
+          if (isPaid) {
             paid = true
-            payAmount = linkAttrs.amount
-            // Payments from a link have their payments array
-            const payments = linkAttrs.payments || []
+            payAmount = attrs.amount || attrs.line_items?.reduce?.((s, li) => s + (li.amount || 0) * (li.quantity || 1), 0)
+            const payments = attrs.payments || []
             if (payments.length) {
               const lastPayment = payments[payments.length - 1]
               paymentSource = lastPayment?.attributes?.source?.type
                 || lastPayment?.attributes?.payment_method_type
-              // Store the payment id if not already stored
               if (lastPayment?.id && !donation.paymongoPaymentId) {
                 donation.paymongoPaymentId = lastPayment.id
               }
@@ -80,7 +86,7 @@ export async function GET(req, { params }) {
     // Also check individual payment if we have one
     if (!paid && donation.paymongoPaymentId) {
       try {
-        const p = await retrievePayment(donation.paymongoPaymentId)
+        const p = await retrieveResource(donation.paymongoPaymentId)
         const attrs = p?.data?.attributes
         if (attrs?.status === 'paid') {
           paid = true

@@ -1,28 +1,14 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-
   "framework": "nextjs",
-
-  // Run serverless functions in the same region as your MongoDB Atlas cluster
-  // (Atlas free tier defaults to AWS us-east-1 — N. Virginia). If your Atlas
-  // cluster is in a different region, change this to match. Matching regions
-  // cuts DB latency from 300-1000ms down to 10-30ms.
   "regions": ["iad1"],
-
-  // Vercel builds Next.js automatically — no build commands needed.
   "headers": [
-    // Long-term immutable cache for static uploads (images/videos/audio) so
-    // repeat visitors and other devices get them from CDN instantly.
     {
       "source": "/uploads/(.*)",
       "headers": [
         { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
       ]
     },
-    // Video files must allow Range (byte serving) so browsers can start playing
-    // before the full file downloads. Vercel/Next sets Accept-Ranges by default
-    // but we force it explicitly along with the correct MIME type so Chrome on
-    // Android plays videos immediately instead of waiting for the full file.
     {
       "source": "/uploads/videos/(.*)",
       "headers": [
@@ -52,7 +38,6 @@
     {
       "source": "/(.*)",
       "headers": [
-        // Security headers (safe defaults for a cinematic marketing site)
         { "key": "X-Content-Type-Options", "value": "nosniff" },
         { "key": "X-Frame-Options", "value": "SAMEORIGIN" },
         { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },

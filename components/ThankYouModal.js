@@ -186,6 +186,7 @@ export default function ThankYouModal({
       >
         {mode === 'video' ? (
           <FullBleedVideo
+            key={activeVideoUrl}
             videoRef={videoRef}
             videoUrl={activeVideoUrl}
             muted={muted}
@@ -302,24 +303,26 @@ export default function ThankYouModal({
         transform: mounted ? 'translateY(0)' : 'translateY(20px)',
         transition: 'opacity 0.6s ease 0.8s, transform 0.6s ease 0.8s',
       }}>
-        {/* Tier label overlaid on video */}
-        <div style={{
-          display: 'inline-block',
-          padding: '0.35rem 1rem',
-          border: '1px solid rgba(201,168,76,0.5)',
-          background: 'rgba(0,0,0,0.45)',
-          backdropFilter: 'blur(4px)',
-          WebkitBackdropFilter: 'blur(4px)',
-          marginBottom: '0.25rem',
-        }}>
+        {/* Tier label overlaid on VIDEO only (text card already has its own chip inside) */}
+        {mode === 'video' && (
           <div style={{
-            fontFamily: 'var(--font-display), Oswald, sans-serif',
-            fontSize: 'clamp(10px, 2.4vw, 12px)', letterSpacing: '0.3em',
-            color: '#C9A84C', textTransform: 'uppercase', fontWeight: 600,
+            display: 'inline-block',
+            padding: '0.35rem 1rem',
+            border: '1px solid rgba(201,168,76,0.5)',
+            background: 'rgba(0,0,0,0.45)',
+            backdropFilter: 'blur(4px)',
+            WebkitBackdropFilter: 'blur(4px)',
+            marginBottom: '0.25rem',
           }}>
-            {tierLabel}
+            <div style={{
+              fontFamily: 'var(--font-display), Oswald, sans-serif',
+              fontSize: 'clamp(10px, 2.4vw, 12px)', letterSpacing: '0.3em',
+              color: '#C9A84C', textTransform: 'uppercase', fontWeight: 600,
+            }}>
+              {tierLabel}
+            </div>
           </div>
-        </div>
+        )}
 
         <div style={{
           fontSize: 'clamp(12px, 2.6vw, 16px)', color: 'rgba(255,255,255,0.85)',

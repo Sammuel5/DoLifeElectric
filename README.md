@@ -49,7 +49,7 @@ Created by **Samuel Barrientos** (DLE Entertainment).
 | **Frontend** | React 18, Tailwind CSS, Framer Motion |
 | **Database** | [MongoDB Atlas](https://www.mongodb.com/atlas) with Mongoose ODM |
 | **Authentication** | [NextAuth.js](https://next-auth.js.org/) (Google OAuth, JWT sessions) |
-| **Payments** | [PayMongo](https://paymongo.com/) (BSP-licensed PH gateway) |
+| **Payments** | [PayMongo](https://paymongo.com/) (BSP-licensed PH gateway) / [Paypal](https://www.paypal.com/) |
 | **Media** | [Cloudinary](https://cloudinary.com) (images, audio, video) |
 | **Deployment** | [Vercel](https://vercel.com) |
 | **Email** | Resend / Nodemailer |

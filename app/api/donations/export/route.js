@@ -58,34 +58,54 @@ export async function GET(req) {
     const search = (searchParams.get('search') || '').trim()
     const start = searchParams.get('start')
     const end = searchParams.get('end')
+    const idsParam = (searchParams.get('ids') || '').trim()
 
     const query = {}
-    if (status !== 'all') query.status = status
-    if (start || end) {
-      query.createdAt = {}
-      if (start) query.createdAt.$gte = new Date(start)
-      if (end) query.createdAt.$lte = new Date(end)
-    }
-    if (search) {
-      const q = search.toLowerCase()
-      const mongoose = await import('mongoose')
-      const regex = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i')
-      query.$or = [
-        { userName: regex },
-        { userEmail: regex },
-        { artistName: regex },
-        { message: regex },
-        { paymongoReferenceNo: regex },
-        { paymongoPaymentId: regex },
-        { paymongoLinkId: regex },
-      ]
+
+    // Selected-IDs export (from bulk-select checkbox on admin page) — SUPER ADMIN ONLY.
+    if (idsParam) {
+      if (!isOwner) {
+        return NextResponse.json({ error: 'Forbidden: only the owner can export selected records' }, { status: 403 })
+      }
+      const mongooseMod = await import('mongoose')
+      const rawIds = idsParam.split(',').map(s => s.trim()).filter(Boolean)
+      const ids = rawIds.filter(id => mongooseMod.Types.ObjectId.isValid(id))
+      if (ids.length === 0) {
+        return NextResponse.json({ error: 'No valid IDs provided' }, { status: 400 })
+      }
+      query._id = { $in: ids }
+    } else {
+      if (status !== 'all') query.status = status
+      if (start || end) {
+        query.createdAt = {}
+        if (start) query.createdAt.$gte = new Date(start)
+        if (end) query.createdAt.$lte = new Date(end)
+      }
+      if (search) {
+        const q = search.toLowerCase()
+        const mongooseMod = await import('mongoose')
+        const regex = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i')
+        query.$or = [
+          { userName: regex },
+          { userEmail: regex },
+          { artistName: regex },
+          { message: regex },
+          { paymongoReferenceNo: regex },
+          { paymongoPaymentId: regex },
+          { paymongoLinkId: regex },
+          { paypalOrderId: regex },
+          { paypalPaymentId: regex },
+          { paypalReferenceNo: regex },
+        ]
+      }
     }
 
     const donations = await Donation.find(query).sort({ createdAt: -1 }).limit(10000).lean()
 
     const dateStamp = new Date().toISOString().slice(0, 10)
-    const statusSuffix = status !== 'all' ? `-${status}` : ''
-    const filename = `DLE-Gifts-${dateStamp}${statusSuffix}.xls`
+    const filename = idsParam
+      ? `DLE-Gifts-Selected-${donations.length}-${dateStamp}.xls`
+      : `DLE-Gifts-${dateStamp}${status !== 'all' ? `-${status}` : ''}.xls`
 
     // Summary totals
     const totalCompleted = donations
@@ -100,17 +120,31 @@ export async function GET(req) {
     const headerCells = ['Date','Reference No','Payment ID','Status','Fan Name','Fan Email','Artist','Gift Type','Amount (PHP)','Payment Method','Message','Paid Date']
 
     const rows = donations.map(d => {
+      // Reference No: PayMongo reference, PayPal reference, or pending
+      const refNo = d.paymongoReferenceNo
+        || d.paypalReferenceNo
+        || d.metadata?.reference_number
+        || '(pending)'
+      // Payment ID: PayMongo payment ID first, else PayPal order/payment ID
+      const payId = d.paymongoPaymentId
+        || d.paypalPaymentId
+        || d.paypalOrderId
+        || ''
+      // Human-readable payment method (PayPal / PayMongo - card/gcash/etc)
+      const method = d.provider === 'paypal'
+        ? `PayPal${d.paymentMethod ? ' - ' + d.paymentMethod : ''}`
+        : (d.paymentMethod || d.provider || 'PayMongo')
       const cells = [
         dateCell(d.createdAt),
-        `<td style="mso-number-format:\\@">${escapeHtml(d.paymongoReferenceNo || d.metadata?.reference_number || '(pending)')}</td>`,
-        `<td style="mso-number-format:\\@">${escapeHtml(d.paymongoPaymentId || '')}</td>`,
+        `<td style="mso-number-format:\\@">${escapeHtml(refNo)}</td>`,
+        `<td style="mso-number-format:\\@">${escapeHtml(payId)}</td>`,
         `<td>${escapeHtml((d.status || '').charAt(0).toUpperCase() + (d.status || '').slice(1))}</td>`,
         `<td>${escapeHtml(d.userName || '')}</td>`,
         `<td>${escapeHtml(d.userEmail || '')}</td>`,
         `<td>${escapeHtml(d.artistName || '')}</td>`,
         `<td>${escapeHtml(GIFT_LABELS[d.giftType] || d.giftType || '')}</td>`,
         phpCell(d.amount),
-        `<td>${escapeHtml(d.paymentMethod || '')}</td>`,
+        `<td>${escapeHtml(method)}</td>`,
         `<td>${escapeHtml(d.message || '')}</td>`,
         dateCell(d.paidAt),
       ].join('')
@@ -128,7 +162,7 @@ export async function GET(req) {
   <x:ExcelWorkbook>
     <x:ExcelWorksheets>
       <x:ExcelWorksheet>
-        <x:Name>Gifts${status !== 'all' ? ' ('+escapeHtml(status)+')' : ''}</x:Name>
+        <x:Name>Gifts${idsParam ? ' (Selected)' : (status !== 'all' ? ' ('+escapeHtml(status)+')' : '')}</x:Name>
         <x:WorksheetOptions>
           <x:FreezePanes/><x:FrozenNoSplit/>
           <x:SplitHorizontal>1</x:SplitHorizontal>

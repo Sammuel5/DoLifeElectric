@@ -57,6 +57,9 @@ export async function GET(req) {
         { paymongoReferenceNo: regex },
         { paymongoPaymentId: regex },
         { paymongoLinkId: regex },
+        { paypalOrderId: regex },
+        { paypalPaymentId: regex },
+        { paypalReferenceNo: regex },
       ]
     }
 

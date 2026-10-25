@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import dbConnect from '@/lib/dbConnect'
 import Donation from '@/models/Donation'
 import { retrieveResource, interpretResource, isPayMongoConfigured } from '@/lib/paymongo'
+import { getPayPalOrder, isPayPalConfigured } from '@/lib/paypal'
 import mongoose from 'mongoose'
 
 export const dynamic = 'force-dynamic'
@@ -38,6 +39,58 @@ export async function GET(req, { params }) {
 
     if (!isPayMongoConfigured()) {
       return NextResponse.json({ status: donation.status, warning: 'PayMongo not configured' })
+    }
+
+    // ---- Branch by provider ----
+    //
+    // PayPal donations: ask the PayPal Orders API directly.
+    if (donation.provider === 'paypal' && isPayPalConfigured() && donation.paypalOrderId) {
+      const order = await getPayPalOrder(donation.paypalOrderId)
+      if (!order) {
+        return NextResponse.json({ status: donation.status, polling: true })
+      }
+      let changed = false
+      if (order.status === 'paid') {
+        if (donation.status !== 'completed') { donation.status = 'completed'; changed = true }
+        if (order.amount) { donation.amount = order.amount; changed = true }
+        if (order.paymentId && order.paymentId !== donation.paypalPaymentId) {
+          donation.paypalPaymentId = order.paymentId; changed = true
+        }
+        donation.paymentMethod = 'paypal'
+        if (!donation.paidAt) { donation.paidAt = order.paidAt ? new Date(order.paidAt * 1000) : new Date(); changed = true }
+        donation.metadata = {
+          ...(donation.metadata || {}),
+          order_id: order.orderId,
+          payment_id: order.paymentId,
+          payer_email: order.payerEmail,
+          payer_name: order.payerName,
+          fee_centavos: order.fee,
+          net_amount_centavos: order.netAmount,
+          synced_by: 'sync-endpoint-paypal',
+          last_synced_at: Date.now(),
+        }
+        if (changed) await donation.save()
+        return NextResponse.json({ status: 'completed', donation: summary(donation), updated: changed })
+      }
+      if (order.status === 'failed' && donation.status !== 'failed' && donation.status !== 'completed') {
+        donation.status = 'failed'; changed = true
+        donation.metadata = { ...(donation.metadata || {}), failed_at: Date.now(), last_synced_at: Date.now() }
+        await donation.save()
+        return NextResponse.json({ status: 'failed', donation: summary(donation), updated: true })
+      }
+      if (order.status === 'refunded' && donation.status !== 'refunded') {
+        donation.status = 'refunded'; changed = true
+        await donation.save()
+        return NextResponse.json({ status: 'refunded', donation: summary(donation), updated: true })
+      }
+      donation.metadata = { ...(donation.metadata || {}), last_synced_at: Date.now() }
+      await donation.save()
+      return NextResponse.json({ status: donation.status, polling: true })
+    }
+
+    if (donation.provider === 'paypal') {
+      // PayPal donation but PayPal not configured yet — nothing to sync
+      return NextResponse.json({ status: donation.status, polling: true })
     }
 
     // Try to fetch the resource from PayMongo using whatever id we have.

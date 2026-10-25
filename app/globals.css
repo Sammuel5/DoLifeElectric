@@ -724,3 +724,10 @@ html.light .admin-hero::after, html[data-theme="light"] .admin-hero::after {
 
 /* Selection color */
 ::selection { background: var(--gold); color: #0A0A0A; }
+
+/* Bulk select action bar slide-down */
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-slideDown { animation: slideDown 220ms ease-out both; }

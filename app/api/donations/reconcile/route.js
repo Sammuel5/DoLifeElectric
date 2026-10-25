@@ -4,6 +4,7 @@ import { authOptions, isOwnerEmail, SUPER_ADMIN, norm } from '@/lib/auth'
 import dbConnect from '@/lib/dbConnect'
 import Donation from '@/models/Donation'
 import { retrieveResource, interpretResource, isPayMongoConfigured } from '@/lib/paymongo'
+import { getPayPalOrder, isPayPalConfigured } from '@/lib/paypal'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -52,8 +53,51 @@ export async function POST(req) {
     for (const d of pending) {
       result.checked++
       try {
-        const candidates = [d.paymongoPaymentId, d.paymongoLinkId].filter(Boolean)
         let info = null
+
+        // PayPal branch
+        if (d.provider === 'paypal' && isPayPalConfigured() && d.paypalOrderId) {
+          const order = await getPayPalOrder(d.paypalOrderId)
+          if (!order) { result.stillPending++; continue }
+          if (order.status === 'paid') {
+            d.status = 'completed'
+            if (order.amount) d.amount = order.amount
+            if (order.paymentId) d.paypalPaymentId = order.paymentId
+            d.paymentMethod = 'paypal'
+            d.paidAt = order.paidAt ? new Date(order.paidAt * 1000) : new Date()
+            d.metadata = {
+              ...(d.metadata || {}),
+              order_id: order.orderId,
+              payment_id: order.paymentId,
+              payer_email: order.payerEmail,
+              payer_name: order.payerName,
+              fee_centavos: order.fee,
+              net_amount_centavos: order.netAmount,
+              synced_by: 'reconcile-paypal',
+              last_synced_at: Date.now(),
+            }
+            await d.save()
+            result.completed++
+            continue
+          }
+          if (order.status === 'failed') {
+            d.status = 'failed'
+            d.metadata = { ...(d.metadata || {}), failed_at: Date.now(), last_synced_at: Date.now() }
+            await d.save()
+            result.failed++
+            continue
+          }
+          if (order.status === 'refunded') {
+            d.status = 'refunded'
+            await d.save()
+            continue
+          }
+          result.stillPending++
+          continue
+        }
+        if (d.provider === 'paypal') { result.stillPending++; continue }
+
+        const candidates = [d.paymongoPaymentId, d.paymongoLinkId].filter(Boolean)
         for (const rid of candidates) {
           const res = await retrieveResource(rid)
           info = interpretResource(res)

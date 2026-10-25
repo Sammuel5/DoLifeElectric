@@ -1,7 +1,7 @@
 'use client'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useRef } from 'react'
 import {
   Users, Music, BarChart3, Search, Trash2, Edit, X, Shield, UserPlus, UserMinus,
   Crown, Download, Activity, Play, DownloadCloud, Trash, ArrowLeft, Sparkles,
@@ -1722,6 +1722,20 @@ function MusicManager({ tracks, genres, onRefresh }) {
    DONATIONS VIEW (paginated)
    ========================================================================= */
 const PER_PAGE = 10
+
+// Tiny checkbox that supports the HTML `indeterminate` state (tri-state for
+// "some on this page selected" in the bulk-select header).
+function MasterCheckbox({ checked, indeterminate, onChange, title }) {
+  const ref = useRef(null)
+  useEffect(() => {
+    if (ref.current) ref.current.indeterminate = !!indeterminate && !checked
+  }, [indeterminate, checked])
+  return (
+    <input ref={ref} type="checkbox" checked={!!checked} onChange={onChange} title={title}
+      className="dle-gold-checkbox" style={{ width: 16, height: 16, cursor: 'pointer', accentColor: '#C9A84C' }} />
+  )
+}
+
 function DonationsView({ isSuperAdmin, onRefresh }) {
   const [donations, setDonations] = useState([])
   const [pagination, setPagination] = useState({ page: 1, limit: PER_PAGE, total: 0, totalPages: 1, hasMore: false })
@@ -1736,9 +1750,13 @@ function DonationsView({ isSuperAdmin, onRefresh }) {
   const [pageRevenue, setPageRevenue] = useState(0)
   const [reconciling, setReconciling] = useState(false)
   const [syncingId, setSyncingId] = useState(null)
+  const [selectedIds, setSelectedIds] = useState(() => new Set()) // SUPER ADMIN bulk-select
+  const [bulkDeleting, setBulkDeleting] = useState(false)
+  const [bulkExporting, setBulkExporting] = useState(false)
 
   useEffect(() => { const t = setTimeout(() => setDebouncedQuery(query.trim()), 350); return () => clearTimeout(t) }, [query])
-  useEffect(() => { setPage(1) }, [debouncedQuery, statusFilter])
+  // Clear selection when page/filter/search changes — prevents deleting items on other pages the user can't see.
+  useEffect(() => { setSelectedIds(new Set()) }, [page, debouncedQuery, statusFilter])
 
   // Auto-reconcile recent pending donations when the Gifts tab first mounts
   // (webhooks can fail/delay, so this catches up statuses against PayMongo).
@@ -1816,9 +1834,79 @@ function DonationsView({ isSuperAdmin, onRefresh }) {
     if (!confirm(`Delete this gift record?\n\n${info}\n\nThis cannot be undone.`)) return
     try {
       const res = await fetch(`/api/donations/${id}`, { method: 'DELETE' })
-      if (res.ok) { toast.success('Gift deleted'); if (donations.length === 1 && page > 1) setPage(page - 1); else refresh() }
+      if (res.ok) {
+        toast.success('Gift deleted')
+        setSelectedIds(prev => { const n = new Set(prev); n.delete(id); return n })
+        if (donations.length === 1 && page > 1) setPage(page - 1); else refresh()
+      }
       else { const d = await res.json().catch(() => ({})); toast.error(d.error || 'Failed') }
     } catch (e) { toast.error(e.message) }
+  }
+
+  // ---- Bulk selection helpers (super admin only) ----
+  const toggleSelect = (id) => {
+    setSelectedIds(prev => {
+      const n = new Set(prev)
+      if (n.has(id)) n.delete(id); else n.add(id)
+      return n
+    })
+  }
+  const toggleSelectAllOnPage = () => {
+    const pageIds = donations.map(d => d._id)
+    const allSelected = pageIds.every(id => selectedIds.has(id))
+    setSelectedIds(prev => {
+      const n = new Set(prev)
+      if (allSelected) pageIds.forEach(id => n.delete(id))
+      else pageIds.forEach(id => n.add(id))
+      return n
+    })
+  }
+  const clearSelection = () => setSelectedIds(new Set())
+  const pageIds = donations.map(d => d._id)
+  const allOnPageSelected = pageIds.length > 0 && pageIds.every(id => selectedIds.has(id))
+  const someOnPageSelected = pageIds.some(id => selectedIds.has(id)) && !allOnPageSelected
+
+  const bulkDelete = async () => {
+    const ids = Array.from(selectedIds)
+    if (ids.length === 0) return
+    if (!confirm(`DELETE ${ids.length} selected gift record(s)?\n\nThis permanently removes them from the database and cannot be undone.`)) return
+    setBulkDeleting(true)
+    try {
+      const res = await fetch('/api/donations/bulk-delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids }),
+      })
+      const d = await res.json().catch(() => ({}))
+      if (res.ok) {
+        toast.success(`Deleted ${d.deleted || ids.length} gift record(s)`)
+        clearSelection()
+        refresh()
+      } else {
+        toast.error(d.error || 'Bulk delete failed')
+      }
+    } catch (e) { toast.error(e.message) }
+    setBulkDeleting(false)
+  }
+
+  const bulkExport = async () => {
+    const ids = Array.from(selectedIds)
+    if (ids.length === 0) return
+    setBulkExporting(true)
+    try {
+      const params = new URLSearchParams({ ids: ids.join(',') })
+      const res = await fetch(`/api/donations/export?${params.toString()}`)
+      if (!res.ok) { const d = await res.json().catch(() => ({})); toast.error(d.error || 'Export failed'); return }
+      const blob = await res.blob()
+      const disposition = res.headers.get('content-disposition') || ''
+      const match = disposition.match(/filename="?([^"]+)"?/)
+      const filename = match ? match[1] : `DLE-Gifts-Selected-${ids.length}-${new Date().toISOString().slice(0,10)}.xls`
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a'); a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove()
+      window.URL.revokeObjectURL(url)
+      toast.success(`Exported ${ids.length} selected record(s)`)
+    } catch (e) { toast.error('Export failed: ' + e.message) }
+    setBulkExporting(false)
   }
 
   const syncOne = async (id) => {
@@ -1885,8 +1973,10 @@ function DonationsView({ isSuperAdmin, onRefresh }) {
     <div>
       {isSuperAdmin ? (
         <Callout tone="gold" icon={Crown}>
-          <strong className="font-semibold">Owner access:</strong> click a status badge to change it, or use the ✕ to remove a record.
-          Statuses auto-update to <strong>completed</strong> when PayMongo confirms payment.
+          <strong className="font-semibold">Owner access:</strong> tick the checkbox next to any gift to select it — then
+          <strong> Export Selected</strong> or <strong>Delete Selected</strong> from the bar that appears.
+          Click a status badge to change it, or use the ✕ to remove one record. Statuses auto-update to
+          <strong> completed</strong> when PayMongo/PayPal confirms payment.
         </Callout>
       ) : (
         <Callout tone="info" icon={Eye}>
@@ -1931,10 +2021,46 @@ function DonationsView({ isSuperAdmin, onRefresh }) {
         </div>
       </div>
 
-      <div className="surface-card overflow-x-auto no-scrollbar -mx-3 sm:mx-0 w-[calc(100%+1.5rem)] sm:w-full rounded-sm" style={{WebkitOverflowScrolling:"touch"}}>
+      {/* Bulk action bar — only visible to super admin when items are selected */}
+      {isSuperAdmin && selectedIds.size > 0 && (
+        <div className="mb-3 flex items-center justify-between gap-3 px-4 py-3 rounded-sm animate-slideDown"
+             style={{ background: 'linear-gradient(90deg, rgba(201,168,76,0.15), rgba(201,168,76,0.05))', border: '1px solid rgba(201,168,76,0.4)', boxShadow: '0 0 20px rgba(201,168,76,0.15)' }}>
+          <div className="flex items-center gap-2 min-w-0">
+            <Check size={16} style={{ color: '#C9A84C' }} />
+            <span className="text-sm font-semibold whitespace-nowrap" style={{ color: '#C9A84C' }}>{selectedIds.size} selected</span>
+            <button onClick={clearSelection} className="text-[11px] uppercase tracking-wider font-semibold px-2 py-1 rounded-sm transition-colors"
+                    style={{ color: 'var(--text-dim)' }} onMouseOver={e => e.currentTarget.style.color = '#fff'} onMouseOut={e => e.currentTarget.style.color = 'var(--text-dim)'}>
+              Clear
+            </button>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <button onClick={bulkExport} disabled={bulkExporting || bulkDeleting}
+              className="flex items-center gap-1.5 px-3 sm:px-4 py-2 text-[11px] sm:text-xs uppercase tracking-wider font-semibold transition-colors disabled:opacity-50 rounded-sm"
+              style={{ background: 'var(--gold-dim)', color: 'var(--gold)', border: '1px solid var(--gold-dim)' }}>
+              <Download size={13} /> {bulkExporting ? 'Exporting…' : 'Export Selected'}
+            </button>
+            <button onClick={bulkDelete} disabled={bulkDeleting || bulkExporting}
+              className="flex items-center gap-1.5 px-3 sm:px-4 py-2 text-[11px] sm:text-xs uppercase tracking-wider font-semibold transition-colors disabled:opacity-50 rounded-sm"
+              style={{ background: 'rgba(239,68,68,0.12)', color: '#f87171', border: '1px solid rgba(239,68,68,0.3)' }}>
+              <Trash2 size={13} /> {bulkDeleting ? 'Deleting…' : 'Delete Selected'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Gifts table (IIFE wraps the colCount constant so colSpan stays in sync) */}
+      {(() => {
+        const colCount = isSuperAdmin ? 8 : 6 // 6 base cols + select col + actions col (super admin)
+        return (
+        <div className="surface-card overflow-x-auto no-scrollbar -mx-3 sm:mx-0 w-[calc(100%+1.5rem)] sm:w-full rounded-sm" style={{WebkitOverflowScrolling:"touch"}}>
         <table className="w-full text-sm" style={{minWidth:"720px"}}>
           <thead>
             <tr style={{ borderBottom: '1px solid var(--border)' }}>
+              {isSuperAdmin && (
+                <th className="p-3 sm:p-4 w-10" style={{ color: 'var(--text-dim)' }}>
+                  <MasterCheckbox checked={allOnPageSelected} indeterminate={someOnPageSelected} onChange={toggleSelectAllOnPage} title="Select all on this page" />
+                </th>
+              )}
               <th className="p-3 sm:p-4 text-[10px] uppercase tracking-widest text-left font-semibold" style={{ color: 'var(--text-dim)' }}>Date</th>
               <th className="p-3 sm:p-4 text-[10px] uppercase tracking-widest text-left font-semibold" style={{ color: 'var(--text-dim)' }}>Fan</th>
               <th className="p-3 sm:p-4 text-[10px] uppercase tracking-widest text-left font-semibold" style={{ color: 'var(--text-dim)' }}>Artist</th>
@@ -1946,13 +2072,21 @@ function DonationsView({ isSuperAdmin, onRefresh }) {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={isSuperAdmin ? 7 : 6} className="p-10 text-center text-sm" style={{ color: 'var(--text-dim)' }}>Loading…</td></tr>
+              <tr><td colSpan={colCount} className="p-10 text-center text-sm" style={{ color: 'var(--text-dim)' }}>Loading…</td></tr>
             ) : donations.length === 0 ? (
-              <tr><td colSpan={isSuperAdmin ? 7 : 6} className="p-10 text-center text-sm" style={{ color: 'var(--text-dim)' }}>No gifts found{debouncedQuery && ' — try a different search'}</td></tr>
+              <tr><td colSpan={colCount} className="p-10 text-center text-sm" style={{ color: 'var(--text-dim)' }}>No gifts found{debouncedQuery && ' — try a different search'}</td></tr>
             ) : donations.map(d => {
               const isEditingThis = editingStatus === d._id
+              const isSelected = selectedIds.has(d._id)
               return (
-                <tr key={d._id} style={{ borderBottom: '1px solid var(--border)' }} className="row-hover transition-colors">
+                <tr key={d._id} style={{ borderBottom: '1px solid var(--border)', background: isSelected ? 'rgba(201,168,76,0.06)' : undefined }} className="row-hover transition-colors">
+                  {isSuperAdmin && (
+                    <td className="p-3 sm:p-4">
+                      <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(d._id)}
+                        className="dle-gold-checkbox" style={{ width: 16, height: 16, cursor: 'pointer', accentColor: '#C9A84C' }}
+                        title={`Select gift from ${d.userName}`} />
+                    </td>
+                  )}
                   <td className="p-3 sm:p-4 whitespace-nowrap text-xs" style={{ color: 'var(--text-muted)' }}>{new Date(d.createdAt).toLocaleDateString()}</td>
                   <td className="p-3 sm:p-4 truncate" style={{ maxWidth: 180 }}>
                     <span className="text-sm font-medium" style={{ color: 'var(--text)' }}>{d.userName}</span>
@@ -1963,7 +2097,13 @@ function DonationsView({ isSuperAdmin, onRefresh }) {
                   <td className="p-3 sm:p-4">
                     {giftEmojis[d.giftType] || '🎁'} <span className="hidden sm:inline text-[10px] sm:text-xs capitalize" style={{ color: 'var(--text-muted)' }}>{d.giftType}</span>
                   </td>
-                  <td className="p-3 sm:p-4 gold-text font-semibold text-sm">{formatPHP(d.amount / 100)}</td>
+                  <td className="p-3 sm:p-4">
+                    <div className="gold-text font-semibold text-sm">{formatPHP(d.amount / 100)}</div>
+                    <div className="text-[9px] sm:text-[10px] mt-0.5 tracking-wider uppercase"
+                         style={{ color: d.provider === 'paypal' ? '#60a5fa' : '#C9A84C', opacity: 0.8 }}>
+                      {d.provider === 'paypal' ? 'PayPal' : 'PayMongo'}
+                    </div>
+                  </td>
                   <td className="p-3 sm:p-4">
                     {isSuperAdmin ? (isEditingThis ? (
                       <div className="flex items-center gap-1">
@@ -1999,7 +2139,9 @@ function DonationsView({ isSuperAdmin, onRefresh }) {
             })}
           </tbody>
         </table>
-      </div>
+        </div>
+        )
+      })()}
 
       {pagination.totalPages > 1 && (
         <Pagination page={page} pageNumbers={pageNumbers} goToPage={goToPage} totalPages={pagination.totalPages} loading={loading} />

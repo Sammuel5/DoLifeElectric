@@ -86,15 +86,26 @@ export function DesktopCarousel({ children }) {
     }
   }, [children])
 
-  // When children change (filter / search), reset to page 1
+  // When children ACTUALLY change (different items — e.g. filter change,
+  // initial load, search results changed), reset to page 1. We deliberately
+  // do NOT reset on every new children array reference (which happens on
+  // every parent re-render due to polling/state updates) — that would snap
+  // the user back to page 1 mid-browse.
+  const contentSig = Array.isArray(children)
+    ? `${children.length}|${children[0]?.key || ''}|${children[children.length - 1]?.key || ''}`
+    : children ? `1|${children.key || ''}` : '0'
+  const contentSigRef = useRef(contentSig)
   useEffect(() => {
-    const el = scrollerRef.current
-    if (el) {
-      el.scrollTo({ left: 0 })
-      updateState()
+    if (contentSigRef.current !== contentSig) {
+      contentSigRef.current = contentSig
+      const el = scrollerRef.current
+      if (el) {
+        el.scrollTo({ left: 0 })
+        updateState()
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [children])
+  }, [contentSig])
 
   const scrollBy = (dir) => {
     const el = scrollerRef.current

@@ -9,7 +9,8 @@ import { Suspense } from 'react'
 import { useSession } from 'next-auth/react'
 import { MobileSwipeRow, DesktopCarousel } from '@/components/TalentCarousel'
 import SmartImage from '@/components/SmartImage'
-import { heroVideoUrl } from '@/lib/covers'
+import ThankYouModal from '@/components/ThankYouModal'
+import { heroVideoUrl, slugify, thankYouVideoCandidates, getThankYouTier } from '@/lib/covers'
 
 // HERO VIDEOS — served from Cloudinary (auto-compressed H.264 ~5-15MB) when
 // CLOUDINARY is configured; falls back to local /uploads/videos/ otherwise.
@@ -222,6 +223,8 @@ function HomeContent() {
   const [loading, setLoading] = useState(true)
   const [homeQuery, setHomeQuery] = useState('')
   const [homeFilter, setHomeFilter] = useState('all')
+  // Thank-you popup state after successful payment
+  const [thankYou, setThankYou] = useState(null)  // { artist, giftType, tier, videoCandidates, preferVideo }
   const searchParams = useSearchParams()
   const isSignedIn = sessionStatus === 'authenticated' && !!session?.user
 
@@ -252,13 +255,68 @@ function HomeContent() {
     }
 
     if (result === 'success') {
-      toast.success('🎉 Thank you for your support! Payment received.')
+      // Determine which artist/group this gift was for, then pick the thank-you
+      // content based on WHO (group vs solo) and HOW MUCH (high/mid/low tier).
+      const artistIdQ = searchParams?.get('artistId')
+      const artistNameQ = searchParams?.get('artist') || ''
+      const giftTypeQ = searchParams?.get('giftType') || 'gift'
+      const amountStr = searchParams?.get('amount') || ''
+      const amountPesos = parseFloat(amountStr) || 0
+
+      // If we have an artistId but artists haven't loaded yet, DO NOT open the
+      // modal yet — we'd incorrectly treat a GROUP as a SOLO artist (because
+      // the fallback object defaults to isGroup:false), causing tier-high/mid/low
+      // videos to play instead of the group video. Bail out; the effect will
+      // re-fire when `artists` finishes loading (artists is in the dep array).
+      const artistsLoaded = artists.length > 0 || loading === false
+      if (artistIdQ && !artistsLoaded && loading) {
+        return
+      }
+
+      const matched = artistIdQ
+        ? artists.find(a => String(a._id) === artistIdQ)
+        : (artistNameQ ? artists.find(a => a.name === artistNameQ) : null)
+      const artistForModal = matched
+        ? { _id: matched._id, name: matched.name, isGroup: !!matched.isGroup, image: matched.image || '' }
+        : artistNameQ
+          ? { name: artistNameQ, isGroup: false, image: '' }
+          : null
+
+      // Pick video candidates + preferred mode using the tiered helper
+      const { mode: prefMode, candidates: videoCandidates, tier } = thankYouVideoCandidates(artistForModal, amountPesos)
+
+      // Debug log (helps troubleshoot "why didn't my video play")
+      if (typeof window !== 'undefined') {
+        console.log('[ThankYou] opening modal:', {
+          artist: artistForModal?.name,
+          isGroup: artistForModal?.isGroup,
+          tier,
+          amountPesos,
+          candidates: videoCandidates,
+          artistsLoaded,
+        })
+      }
+
+      setThankYou({
+        artist: artistForModal,
+        giftType: ['food','clothes','gift','money'].includes(giftTypeQ) ? giftTypeQ : 'gift',
+        tier,
+        amountPesos,
+        videoCandidates: videoCandidates || [],
+        preferVideo: prefMode === 'video',
+      })
+
+      // Also fire a lightweight toast so screen readers / users with slow
+      // devices get immediate feedback before the modal mounts.
+      toast.success('🎉 Thank you for your support! Payment received.', { duration: 3000 })
+
       cleanupUrl()
+
       // Client-side payment-status sync: poll the sync endpoint repeatedly so
       // the admin dashboard sees "completed" even if the PayMongo webhook is
-      // delayed/misconfigured/fails. Uses spaced retries over ~90 seconds.
+      // delayed/misconfigured/fails. Runs regardless of the modal.
       if (refId && refId.match(/^[0-9a-fA-F]{24}$/)) {
-        const delays = [1500, 4000, 8000, 15000, 25000, 40000]  // absolute times from now
+        const delays = [1500, 4000, 8000, 15000, 25000, 40000]
         let cancelled = false
         const poll = async (idx) => {
           if (cancelled || idx >= delays.length) return
@@ -281,7 +339,7 @@ function HomeContent() {
       toast('Payment cancelled.', { icon: 'ℹ️' })
       cleanupUrl()
     }
-  }, [searchParams])
+  }, [searchParams, artists])
 
   // Show first 8 artists on homepage (mix of groups + solo + members)
   const groups = artists.filter(a => a.isGroup)
@@ -1032,6 +1090,19 @@ function HomeContent() {
       </section>
 
       {selected && <VideoModal artist={selected} onClose={() => setSelected(null)} />}
+
+      {thankYou && (
+        <ThankYouModal
+          open={!!thankYou}
+          artist={thankYou.artist}
+          giftType={thankYou.giftType}
+          tier={thankYou.tier}
+          amountPesos={thankYou.amountPesos}
+          videoCandidates={thankYou.videoCandidates}
+          preferVideo={thankYou.preferVideo}
+          onClose={() => setThankYou(null)}
+        />
+      )}
     </div>
   )
 }

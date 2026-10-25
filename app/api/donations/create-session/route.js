@@ -142,9 +142,11 @@ export async function POST(req) {
     // Ensure origin doesn't have trailing slash
     const cleanOrigin = origin.replace(/\/+$/, '')
 
-    // Success lands on the homepage with a thank-you toast + payment ref
-    // (keeps user in the flow instead of dumping them on the artists page).
-    const successUrl = `${cleanOrigin}/?gift=success&ref=${donation._id}&artist=${encodeURIComponent(artistName)}&artistId=${artistObjId || ''}`
+    // Success lands on the homepage with a thank-you popup. We include artistId,
+    // artistName, giftType and amountPesos so the ThankYouModal can pick the right
+    // tier and mode (group video vs solo text-card vs high/mid/low videos) without an
+    // extra round-trip.
+    const successUrl = `${cleanOrigin}/?gift=success&ref=${donation._id}&artist=${encodeURIComponent(artistName)}&artistId=${artistObjId || ''}&giftType=${giftType}&amount=${amount}`
     const cancelUrl = `${cleanOrigin}/?gift=cancelled&ref=${donation._id}`
 
     console.log('[create-session] PayMongo redirect URLs:', {

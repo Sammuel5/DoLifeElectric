@@ -2,8 +2,32 @@
 import { useState } from 'react'
 import { ArrowLeft, Lock, Shield, Heart } from 'lucide-react'
 import { GIFT_TYPES } from '@/lib/paymongo-config'
+import { slugify, thankYouVideoCandidates } from '@/lib/covers'
 import { useSession, signIn } from 'next-auth/react'
 import toast from 'react-hot-toast'
+import PayPalButton from './PayPalButton'
+import { isPayPalConfigured } from '@/lib/paypal-client'
+
+/**
+ * Inject a <link rel="preload"> into <head> for one asset, deduplicating by href.
+ * Browsers will begin fetching the resource immediately (during the PayMongo
+ * redirect) so when the user lands back on the homepage the video/image is
+ * already cached and the thank-you modal appears instantly.
+ */
+function preloadAsset(href, { as = 'video', type } = {}) {
+  if (typeof document === 'undefined') return
+  // Don't duplicate if already preloaded
+  if (document.querySelector(`link[rel="preload"][href="${href}"]`)) return
+  const link = document.createElement('link')
+  link.rel = 'preload'
+  link.href = href
+  link.as = as
+  if (type) link.type = type
+  // Low priority so it doesn't block PayMongo page itself
+  link.setAttribute('importance', 'low')
+  link.setAttribute('fetchpriority', 'low')
+  document.head.appendChild(link)
+}
 
 // Convert GIFT_TYPES object to array for mapping
 const GIFT_TYPES_LIST = Object.entries(GIFT_TYPES).map(([id, g]) => ({
@@ -21,6 +45,9 @@ export default function GiftDonation({ artist, onBack, onClose }) {
   const [customAmount, setCustomAmount] = useState('')
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(false)
+  const [provider, setProvider] = useState('paymongo') // 'paymongo' | 'paypal'
+  const [payPalBusy, setPayPalBusy] = useState(false)
+  const payPalAvailable = isPayPalConfigured()
 
   const requireLogin = () => {
     if (!session) {
@@ -55,12 +82,59 @@ export default function GiftDonation({ artist, onBack, onClose }) {
       })
       const data = await res.json()
       if (data.error) { toast.error(data.error); setLoading(false); return }
+
+      // PRELOAD thank-you assets while the user goes through PayMongo checkout
+      // (by the time they land back from PayMongo, ~20–60s later, video bytes
+      // are cached and the popup plays instantly).
+      try { preloadThankYouAssets() } catch (_) {}
+
       // Redirect to PayMongo hosted checkout page
       window.location.href = data.url
     } catch (e) {
       toast.error('Payment failed: ' + e.message)
       setLoading(false)
     }
+  }
+
+  // Preload helper — preloads the right video(s) based on artist type + amount,
+  // so thank-you clips play instantly after the payment redirect.
+  const preloadThankYouAssets = () => {
+    const artistForPreload = artist ? { name: artist.name, isGroup: !!artist.isGroup } : null
+    const { candidates } = thankYouVideoCandidates(artistForPreload, getAmountPesos())
+    // Preload only the FIRST candidate (most likely to play); others are lazy-loaded
+    // only if the first fails (404), which shouldn't happen once videos are uploaded.
+    if (candidates && candidates.length > 0) {
+      preloadAsset(candidates[0], { as: 'video', type: 'video/mp4' })
+    }
+  }
+
+  // PayPal flow runs inside a popup (no page navigation until success). After
+  // capture we navigate the main window to the same ?gift=success URL the
+  // PayMongo redirect uses, so the ThankYouModal fires identically.
+  const handlePayPalStart = () => {
+    if (!requireLogin()) return
+    setPayPalBusy(true)
+    try { preloadThankYouAssets() } catch (_) {}
+  }
+  const handlePayPalSuccess = ({ donationId }) => {
+    const params = new URLSearchParams({
+      gift: 'success',
+      ref: donationId,
+      artist: artist?.name || 'DLE Entertainment',
+      artistId: artist?._id || '',
+      giftType: giftType.id,
+      amount: String(getAmountPesos()),
+    })
+    // Hard navigate so the success URL fires the ThankYouModal + URL cleanup
+    window.location.href = `${window.location.pathname}?${params.toString()}`
+  }
+  const handlePayPalError = (msg) => {
+    toast.error(msg || 'PayPal payment failed')
+    setPayPalBusy(false)
+  }
+  const handlePayPalCancel = () => {
+    toast('PayPal cancelled.', { icon: 'ℹ️' })
+    setPayPalBusy(false)
   }
 
   const formattedAmount = () => {
@@ -160,23 +234,45 @@ export default function GiftDonation({ artist, onBack, onClose }) {
 
           <div>
             <label className="text-xs uppercase tracking-widest text-white/60 mb-2 block">Payment Method</label>
-            <div className="grid grid-cols-3 gap-2">
-              <div className="border-2 border-gold bg-gold/10 text-gold p-2.5 sm:p-3 text-center">
-                <div className="text-lg mb-0.5">📱</div>
-                <div className="text-[10px] sm:text-xs font-semibold">QR PH</div>
-              </div>
-              <div className="border-2 border-gold bg-gold/10 text-gold p-2.5 sm:p-3 text-center">
-                <div className="text-lg mb-0.5">💳</div>
-                <div className="text-[10px] sm:text-xs font-semibold">GCash</div>
-              </div>
-              <div className="border-2 border-gold bg-gold/10 text-gold p-2.5 sm:p-3 text-center">
-                <div className="text-lg mb-0.5">🏦</div>
-                <div className="text-[10px] sm:text-xs font-semibold">Maya</div>
-              </div>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setProvider('paymongo')}
+                disabled={loading || payPalBusy}
+                className={`p-2.5 sm:p-3 text-center transition-all border-2 disabled:opacity-50 ${
+                  provider === 'paymongo' ? 'border-gold bg-gold/10 text-gold' : 'border-white/10 hover:border-gold/50 text-white/70'
+                }`}
+              >
+                <div className="text-lg mb-0.5">🇵🇭</div>
+                <div className="text-[10px] sm:text-xs font-semibold tracking-wide">PH Wallets / Banks</div>
+                <div className="text-[9px] sm:text-[10px] mt-0.5 opacity-70">GCash · Maya · QR Ph · BPI · UBP</div>
+              </button>
+              <button
+                type="button"
+                onClick={() => setProvider('paypal')}
+                disabled={loading || payPalBusy || !payPalAvailable}
+                className={`p-2.5 sm:p-3 text-center transition-all border-2 disabled:opacity-50 ${
+                  provider === 'paypal' ? 'border-gold bg-gold/10 text-gold' : 'border-white/10 hover:border-gold/50 text-white/70'
+                }`}
+                title={!payPalAvailable ? 'PayPal coming soon' : ''}
+              >
+                <div className="text-lg mb-0.5">🌍</div>
+                <div className="text-[10px] sm:text-xs font-semibold tracking-wide">PayPal / Card</div>
+                <div className="text-[9px] sm:text-[10px] mt-0.5 opacity-70">
+                  {payPalAvailable ? 'International · Any Card · PayPal' : 'Setup in progress'}
+                </div>
+              </button>
             </div>
-            <p className="text-[11px] sm:text-xs text-white/40 mt-2 leading-relaxed">
-              You'll be redirected to PayMongo's secure checkout: QR Ph, GCash, Maya, GrabPay, Cards, BPI, UnionBank, 7-Eleven.
-            </p>
+            {provider === 'paymongo' && (
+              <p className="text-[11px] sm:text-xs text-white/40 mt-2 leading-relaxed">
+                You'll be redirected to PayMongo's secure checkout: GCash, Maya, QR Ph, GrabPay, Cards, BPI, UnionBank, 7-Eleven.
+              </p>
+            )}
+            {provider === 'paypal' && payPalAvailable && (
+              <p className="text-[11px] sm:text-xs text-white/40 mt-2 leading-relaxed">
+                International cards, PayPal wallet, and guest checkout accepted. PayPal auto-converts your currency to PHP.
+              </p>
+            )}
           </div>
 
           <div>
@@ -185,10 +281,35 @@ export default function GiftDonation({ artist, onBack, onClose }) {
               placeholder="Add a personal message..." className="form-input resize-none" />
           </div>
 
-          <button onClick={handleCheckout} disabled={loading}
-            className="btn-gold w-full flex items-center justify-center gap-2 py-3.5 sm:py-4 disabled:opacity-60 text-base sm:text-lg">
-            {loading ? 'Redirecting...' : (<><Lock size={18} /> Pay {formattedAmount()} Securely</>)}
-          </button>
+          {provider === 'paymongo' ? (
+            <button onClick={handleCheckout} disabled={loading || payPalBusy}
+              className="btn-gold w-full flex items-center justify-center gap-2 py-3.5 sm:py-4 disabled:opacity-60 text-base sm:text-lg">
+              {loading ? 'Redirecting...' : (<><Lock size={18} /> Pay {formattedAmount()} Securely</>)}
+            </button>
+          ) : payPalAvailable ? (
+            <div className="w-full py-2">
+              {payPalBusy && (
+                <div className="text-center text-white/60 text-xs mb-2">
+                  <Lock size={12} className="inline -mt-0.5 mr-1" /> Connecting to PayPal…
+                </div>
+              )}
+              <PayPalButton
+                artist={artist}
+                giftType={giftType.id}
+                amountPesos={getAmountPesos()}
+                message={message}
+                disabled={loading}
+                onStart={handlePayPalStart}
+                onSuccess={handlePayPalSuccess}
+                onError={handlePayPalError}
+                onCancel={handlePayPalCancel}
+              />
+            </div>
+          ) : (
+            <div className="w-full text-center text-white/40 text-xs py-3 border border-white/10">
+              PayPal will be available shortly.
+            </div>
+          )}
 
           <div className="flex items-center justify-center gap-3 sm:gap-4 text-white/30 text-[10px] sm:text-xs flex-wrap pt-1">
             <span className="flex items-center gap-1"><Lock size={11} /> 256-bit SSL</span>

@@ -12,10 +12,14 @@ const DonationSchema = new mongoose.Schema({
   paymentMethod: { type: String, default: 'card' },
   message: { type: String, default: '' },
   provider: { type: String, default: 'paymongo' }, // payment provider name
-  paymongoLinkId: { type: String, default: '' },       // PayMongo Link ID (link_xxx)
+  paymongoLinkId: { type: String, default: '' },       // PayMongo link/checkout-session id (link_xxx / cs_xxx)
   paymongoPaymentId: { type: String, default: '' },    // PayMongo Payment ID (pay_xxx)
   paymongoReferenceNo: { type: String, default: '' },  // dle_<donationId> reference
   checkoutUrl: { type: String, default: '' },          // PayMongo hosted checkout URL
+  // PayPal fields
+  paypalOrderId: { type: String, default: '' },        // PayPal Order ID (O-... or 8X...)
+  paypalPaymentId: { type: String, default: '' },      // PayPal Capture ID (e.g. 1AB23C4D...)
+  paypalReferenceNo: { type: String, default: '' },    // dle_<donationId>
   // Legacy fields (kept for backward compat with any old test data):
   stripeSessionId: { type: String, default: '' },
   stripePaymentIntentId: { type: String, default: '' },
